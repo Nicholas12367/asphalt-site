@@ -515,17 +515,17 @@ input:focus, select:focus { outline: none; border-color: var(--amber); }
   <div class="section-label">Pricing &amp; material</div>
   <div class="card">
     <div class="card-title">Material &amp; quote settings</div>
-    <div class="card-subtitle">Everything is in US tons (2,000 lb), the unit hot mix is sold by. These values persist on this device.</div>
+    <div class="card-subtitle">Asphalt is in metric tonnes (1,000 kg), the unit your plant sells hot mix by. Measurements stay in feet and inches. These values persist on this device.</div>
     <div class="settings-grid">
       <div class="input-group">
-        <label>Asphalt price ($/ton)</label>
+        <label>Asphalt price ($/tonne)</label>
         <input type="number" id="set-price" step="0.01" min="0" inputmode="decimal" placeholder="e.g. 110">
-        <div class="input-hint">What you pay per ton of hot mix.</div>
+        <div class="input-hint">What you pay per tonne of hot mix.</div>
       </div>
       <div class="input-group">
-        <label>Density (lb/ft³)</label>
-        <input type="number" id="set-density" step="1" min="100" max="200" inputmode="decimal">
-        <div class="input-hint">Compacted hot mix is 145 standard.</div>
+        <label>Density (kg/m³)</label>
+        <input type="number" id="set-density" step="5" min="1500" max="3000" inputmode="decimal">
+        <div class="input-hint">Compacted hot mix is about 2,325. Confirm with your plant.</div>
       </div>
       <div class="input-group">
         <label>Waste / over-order (%)</label>
@@ -562,8 +562,8 @@ input:focus, select:focus { outline: none; border-color: var(--amber); }
 <div class="results-bar">
   <div class="results-strip">
     <div class="result-cell tons">
-      <div class="result-label">Tons to order</div>
-      <div class="result-value"><span id="t-tons">0.00</span><span class="small">tons</span></div>
+      <div class="result-label">Tonnes to order</div>
+      <div class="result-value"><span id="t-tons">0.00</span><span class="small">tonnes</span></div>
     </div>
     <div class="result-cell">
       <div class="result-label">Job cost</div>
@@ -708,7 +708,7 @@ function shoelace(verts) {
 /* ════════════════════ State ════════════════════ */
 const STORE_KEY = 'asphalt-costing-v3';
 const OLD_SETTINGS_KEY = 'asphalt-calc-settings-v2';
-const DEFAULT_SETTINGS = { pricePerTon: 0, density: 145, wastePct: 5, markupPct: 0, taxPct: 5 };
+const DEFAULT_SETTINGS = { pricePerTon: 0, density: 2325, wastePct: 5, markupPct: 0, taxPct: 5 };
 
 function newRepair(n) {
   return { id: uid(), name: 'Repair ' + n, shape: 'rect',
@@ -729,7 +729,8 @@ function migrateOldSettings(job) {
     if (!raw) return;
     const old = JSON.parse(raw);
     if (num(old.asphaltCost) > 0) job.settings.pricePerTon = num(old.asphaltCost);
-    if (num(old.density) > 0) job.settings.density = num(old.density);
+    /* old tool stored lb/ft3; convert to kg/m3 */
+    if (num(old.density) > 0) job.settings.density = Math.round(num(old.density) * 16.0185);
     if (Number.isFinite(old.wastePct)) job.settings.wastePct = num(old.wastePct);
   } catch (e) {}
 }
@@ -740,6 +741,12 @@ function loadDB() {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.jobs) && parsed.jobs.length) {
         DB = parsed;
+        /* jobs saved before the tonnes switch have lb/ft3 density; convert */
+        DB.jobs.forEach(jb => {
+          if (jb.settings && num(jb.settings.density) > 0 && jb.settings.density < 1000) {
+            jb.settings.density = Math.round(jb.settings.density * 16.0185);
+          }
+        });
         if (!DB.jobs.find(j => j.id === DB.currentId)) DB.currentId = DB.jobs[0].id;
         return;
       }
@@ -769,7 +776,8 @@ function repairArea(r) {
 function calcRepair(r, s) {
   const area = repairArea(r);
   const volFt3 = area * (r.depthIn / 12);
-  const tons = volFt3 * s.density / 2000;
+  const volM3 = volFt3 * 0.0283168;
+  const tons = volM3 * s.density / 1000; /* metric tonnes */
   const tonsOrder = tons * (1 + s.wastePct / 100);
   const material = tonsOrder * s.pricePerTon;
   const labor = r.labor.reduce((a, l) => a + num(l.rate) * num(l.hours), 0);
@@ -866,7 +874,7 @@ function repairCard(r, idx) {
       '<div class="repair-idx">' + (idx + 1) + '</div>' +
       '<input type="text" class="r-name" data-f="name" value="' + esc(r.name) + '" aria-label="Repair name">' +
       '<div class="repair-mini">' +
-        '<div class="m-tons"><span data-out="mini-tons">' + fmt(c.tonsOrder) + '</span> tons</div>' +
+        '<div class="m-tons"><span data-out="mini-tons">' + fmt(c.tonsOrder) + '</span> tonnes</div>' +
         '<div class="m-total" data-out="mini-total">' + money0(c.total) + '</div>' +
       '</div>' +
       '<span class="chev">&#9660;</span>' +
@@ -883,7 +891,7 @@ function repairCard(r, idx) {
       '</div>' +
       '<div class="calc-strip">' +
         '<div><div class="c-label">Area</div><div class="c-val"><span data-out="area">' + fmt(c.area, 1) + '</span><span class="sm"> ft&sup2;</span></div></div>' +
-        '<div><div class="c-label">Asphalt</div><div class="c-val"><span data-out="tons">' + fmt(c.tonsOrder) + '</span><span class="sm"> tons</span></div></div>' +
+        '<div><div class="c-label">Asphalt</div><div class="c-val"><span data-out="tons">' + fmt(c.tonsOrder) + '</span><span class="sm"> tonnes</span></div></div>' +
         '<div><div class="c-label">Material $</div><div class="c-val" data-out="material">' + money(c.material) + '</div></div>' +
       '</div>' +
       '<div class="section-label" style="margin-top:16px;">Labor on this repair</div>' +
@@ -981,7 +989,7 @@ function renderSummary() {
     html = '<div class="card-subtitle">Add a repair to see the breakdown.</div>';
   } else {
     html = '<div class="summary-table-wrap"><table class="summary-table"><thead><tr>' +
-      '<th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tons</th><th>Material</th><th>Labor</th><th>Extras</th><th>Total</th>' +
+      '<th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tonnes</th><th>Material</th><th>Labor</th><th>Extras</th><th>Total</th>' +
       '</tr></thead><tbody>';
     C.per.forEach(p => {
       html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 1) + '</td><td>' + (p.r.depthIn || 0) + '"</td>' +
@@ -993,7 +1001,7 @@ function renderSummary() {
     html += '</tbody></table></div>';
     const s = j.settings;
     html += '<div class="totals-stack">' +
-      '<div class="t-line"><span class="l">Asphalt to order (incl. ' + s.wastePct + '% waste)</span><span class="v"><strong>' + fmt(C.tonsOrder) + ' tons</strong></span></div>' +
+      '<div class="t-line"><span class="l">Asphalt to order (incl. ' + s.wastePct + '% waste)</span><span class="v"><strong>' + fmt(C.tonsOrder) + ' tonnes</strong></span></div>' +
       '<div class="t-line"><span class="l">Total cost (material + labor + extras)</span><span class="v">' + money(C.cost) + '</span></div>' +
       '<div class="t-line"><span class="l">Markup ' + s.markupPct + '%</span><span class="v">' + money(C.price - C.cost) + '</span></div>' +
       '<div class="t-line"><span class="l">Customer price</span><span class="v">' + money(C.price) + '</span></div>' +
@@ -1313,7 +1321,7 @@ function buildPrintSheet(mode) {
       '</div>' +
       '<div class="p-note">Estimate valid 30 days. Final billing based on measured quantities placed.</div>';
   } else {
-    html += '<table><thead><tr><th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tons</th><th>Material</th><th>Labor</th><th>Extras</th><th>Cost</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tonnes</th><th>Material</th><th>Labor</th><th>Extras</th><th>Cost</th></tr></thead><tbody>';
     C.per.forEach(p => {
       html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 1) + '</td><td>' + (p.r.depthIn || 0) + '"</td><td>' + fmt(p.c.tonsOrder) + '</td>' +
         '<td>' + money(p.c.material) + '</td><td>' + money(p.c.labor) + '</td><td>' + money(p.c.extras) + '</td><td>' + money(p.c.total) + '</td></tr>';
@@ -1322,7 +1330,7 @@ function buildPrintSheet(mode) {
     if (C.jobExtras > 0) html += '<tr><td>Other job costs</td><td></td><td></td><td></td><td></td><td></td><td>' + money(C.jobExtras) + '</td><td>' + money(C.jobExtras) + '</td></tr>';
     html += '</tbody></table>';
     html += '<div class="p-totals">' +
-      '<div><span>Asphalt to order</span><span>' + fmt(C.tonsOrder) + ' tons</span></div>' +
+      '<div><span>Asphalt to order</span><span>' + fmt(C.tonsOrder) + ' tonnes</span></div>' +
       '<div><span>Total cost</span><span>' + money(C.cost) + '</span></div>' +
       '<div><span>Markup ' + s.markupPct + '%</span><span>' + money(C.price - C.cost) + '</span></div>' +
       '<div><span>Customer price</span><span>' + money(C.price) + '</span></div>' +
