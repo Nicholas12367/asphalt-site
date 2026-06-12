@@ -153,6 +153,13 @@ input[type="text"], input[type="number"], select {
 input:focus, select:focus { outline: none; border-color: var(--amber); }
 .input-hint { font-size: 11px; color: var(--text-faint); margin-top: 5px; line-height: 1.4; }
 .settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.rate-row { display: flex; gap: 6px; }
+.rate-row input { flex: 1.2; min-width: 0; }
+.rate-row select { flex: 1; min-width: 0; }
+.rate-ov-row { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+.rate-ov-row label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); }
+.rate-ov-row input { max-width: 120px; text-align: right; }
+.rate-ov-row .unit { font-size: 12px; color: var(--text-faint); font-weight: 600; }
 
 /* ft + in paired input */
 .ftin { display: flex; gap: 6px; }
@@ -533,6 +540,26 @@ input:focus, select:focus { outline: none; border-color: var(--amber); }
         <div class="input-hint">5% simple, 10% irregular shapes.</div>
       </div>
       <div class="input-group">
+        <label>How you price</label>
+        <select id="set-mode">
+          <option value="rate">Rate per area (typical)</option>
+          <option value="markup">Cost plus markup %</option>
+        </select>
+        <div class="input-hint">Rate: you bill by area, e.g. $50 per sq yd. Markup: you bill your cost plus a percentage.</div>
+      </div>
+      <div class="input-group" id="grp-rate">
+        <label>Charge rate</label>
+        <div class="rate-row">
+          <input type="number" id="set-rate" step="0.5" min="0" inputmode="decimal" placeholder="e.g. 50">
+          <select id="set-rate-unit">
+            <option value="yd2">$ / sq yd</option>
+            <option value="ft2">$ / sq ft</option>
+            <option value="m2">$ / sq m</option>
+          </select>
+        </div>
+        <div class="input-hint">What you charge per square yard of repair. Any repair can override it.</div>
+      </div>
+      <div class="input-group" id="grp-markup">
         <label>Markup / profit (%)</label>
         <input type="number" id="set-markup" step="1" min="0" inputmode="decimal">
         <div class="input-hint">Added on top of total cost to get your customer price.</div>
@@ -708,12 +735,17 @@ function shoelace(verts) {
 /* ════════════════════ State ════════════════════ */
 const STORE_KEY = 'asphalt-costing-v3';
 const OLD_SETTINGS_KEY = 'asphalt-calc-settings-v2';
-const DEFAULT_SETTINGS = { pricePerTon: 0, density: 2325, wastePct: 5, markupPct: 0, taxPct: 5 };
+const DEFAULT_SETTINGS = { pricePerTon: 0, density: 2325, wastePct: 5, markupPct: 0, taxPct: 5, pricingMode: 'rate', chargeRate: 0, chargeUnit: 'yd2' };
+const AREA_UNITS = {
+  yd2: { factor: 1 / 9,        label: 'sq yd' },
+  ft2: { factor: 1,            label: 'sq ft' },
+  m2:  { factor: 0.09290304,   label: 'sq m'  }
+};
 
 function newRepair(n) {
   return { id: uid(), name: 'Repair ' + n, shape: 'rect',
     L: 0, W: 0, D: 0, B: 0, H: 0, depthIn: 2,
-    poly: null, labor: [], costs: [] };
+    poly: null, labor: [], costs: [], rateOverride: '' };
 }
 function newJob(name) {
   return { id: uid(), name: name || 'New job', created: new Date().toISOString().slice(0, 10),
@@ -731,6 +763,10 @@ function migrateOldSettings(job) {
     if (num(old.asphaltCost) > 0) job.settings.pricePerTon = num(old.asphaltCost);
     /* old tool stored lb/ft3; convert to kg/m3 */
     if (num(old.density) > 0) job.settings.density = Math.round(num(old.density) * 16.0185);
+    if (num(old.chargeRate) > 0 && AREA_UNITS[old.chargeUnit]) {
+      job.settings.chargeRate = num(old.chargeRate);
+      job.settings.chargeUnit = old.chargeUnit;
+    }
     if (Number.isFinite(old.wastePct)) job.settings.wastePct = num(old.wastePct);
   } catch (e) {}
 }
@@ -741,9 +777,11 @@ function loadDB() {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.jobs) && parsed.jobs.length) {
         DB = parsed;
-        /* jobs saved before the tonnes switch have lb/ft3 density; convert */
         DB.jobs.forEach(jb => {
-          if (jb.settings && num(jb.settings.density) > 0 && jb.settings.density < 1000) {
+          /* fill in settings added after the job was saved */
+          jb.settings = { ...DEFAULT_SETTINGS, ...(jb.settings || {}) };
+          /* jobs saved before the tonnes switch have lb/ft3 density; convert */
+          if (num(jb.settings.density) > 0 && jb.settings.density < 1000) {
             jb.settings.density = Math.round(jb.settings.density * 16.0185);
           }
         });
@@ -782,7 +820,14 @@ function calcRepair(r, s) {
   const material = tonsOrder * s.pricePerTon;
   const labor = r.labor.reduce((a, l) => a + num(l.rate) * num(l.hours), 0);
   const extras = r.costs.reduce((a, c) => a + num(c.amount), 0);
-  return { area, volFt3, tons, tonsOrder, material, labor, extras, total: material + labor + extras };
+  const total = material + labor + extras;
+  /* customer charge for this repair */
+  const unit = AREA_UNITS[s.chargeUnit] || AREA_UNITS.yd2;
+  const effRate = num(r.rateOverride) > 0 ? num(r.rateOverride) : num(s.chargeRate);
+  const charge = s.pricingMode === 'rate'
+    ? area * unit.factor * effRate
+    : total * (1 + num(s.markupPct) / 100);
+  return { area, volFt3, tons, tonsOrder, material, labor, extras, total, charge, effRate };
 }
 function calcJob(j) {
   const s = j.settings;
@@ -791,7 +836,7 @@ function calcJob(j) {
   const crewLabor = j.crew.reduce((a, m) => a + num(m.rate) * num(m.hours), 0);
   const jobExtras = j.jobCosts.reduce((a, c) => a + num(c.amount), 0);
   const cost = sum('total') + crewLabor + jobExtras;
-  const price = cost * (1 + s.markupPct / 100);
+  const price = s.pricingMode === 'rate' ? sum('charge') : cost * (1 + s.markupPct / 100);
   const tax = price * s.taxPct / 100;
   return {
     per,
@@ -866,7 +911,9 @@ function crewChips(r) {
 }
 
 function repairCard(r, idx) {
-  const c = calcRepair(r, job().settings);
+  const s = job().settings;
+  const c = calcRepair(r, s);
+  const rateMode = s.pricingMode === 'rate';
   const open = ui.open.has(r.id);
   const shapes = [['rect', 'Rectangle'], ['circle', 'Circle'], ['tri', 'Triangle'], ['poly', 'Draw it']];
   return '<div class="repair-card' + (open ? ' open' : '') + '" data-id="' + r.id + '">' +
@@ -875,7 +922,7 @@ function repairCard(r, idx) {
       '<input type="text" class="r-name" data-f="name" value="' + esc(r.name) + '" aria-label="Repair name">' +
       '<div class="repair-mini">' +
         '<div class="m-tons"><span data-out="mini-tons">' + fmt(c.tonsOrder) + '</span> tonnes</div>' +
-        '<div class="m-total" data-out="mini-total">' + money0(c.total) + '</div>' +
+        '<div class="m-total" data-out="mini-total">' + money0(rateMode ? c.charge : c.total) + '</div>' +
       '</div>' +
       '<span class="chev">&#9660;</span>' +
     '</div>' +
@@ -904,7 +951,13 @@ function repairCard(r, idx) {
       '<div class="row-list">' + costRows(r.costs, 'del-cost') + '</div>' +
       '<button class="btn-add-row" data-act="add-cost">+ Add cost</button>' +
       '<div class="subtotal-line">Extras: <strong data-out="extras">' + money(c.extras) + '</strong></div>' +
-      '<div class="repair-total-line"><span class="lbl">Repair total (cost)</span><span class="val" data-out="total">' + money(c.total) + '</span></div>' +
+      (rateMode
+        ? '<div class="rate-ov-row"><label>Rate this repair</label>' +
+          '<input type="number" inputmode="decimal" min="0" step="0.5" data-f="rateov" value="' + (r.rateOverride || '') + '" placeholder="' + (num(s.chargeRate) || 0) + '">' +
+          '<span class="unit">$ / ' + (AREA_UNITS[s.chargeUnit] || AREA_UNITS.yd2).label + '</span></div>' +
+          '<div class="repair-total-line"><span class="lbl">Customer charge</span><span class="val" data-out="charge">' + money(c.charge) + '</span></div>' +
+          '<div class="subtotal-line">Your cost on this repair: <strong data-out="total">' + money(c.total) + '</strong></div>'
+        : '<div class="repair-total-line"><span class="lbl">Repair total (cost)</span><span class="val" data-out="total">' + money(c.total) + '</span></div>') +
       '<div class="repair-foot">' +
         '<button class="btn small" data-act="dup">Duplicate</button>' +
         '<button class="btn small danger" data-act="del" style="margin-left:auto;">Delete repair</button>' +
@@ -988,23 +1041,27 @@ function renderSummary() {
   if (!j.repairs.length) {
     html = '<div class="card-subtitle">Add a repair to see the breakdown.</div>';
   } else {
+    const s = j.settings;
+    const rateMode = s.pricingMode === 'rate';
     html = '<div class="summary-table-wrap"><table class="summary-table"><thead><tr>' +
-      '<th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tonnes</th><th>Material</th><th>Labor</th><th>Extras</th><th>Total</th>' +
+      '<th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tonnes</th><th>Material</th><th>Labor</th><th>Extras</th><th>' + (rateMode ? 'Cost</th><th>Charge' : 'Total') + '</th>' +
       '</tr></thead><tbody>';
     C.per.forEach(p => {
       html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 1) + '</td><td>' + (p.r.depthIn || 0) + '"</td>' +
         '<td>' + fmt(p.c.tonsOrder) + '</td><td>' + money(p.c.material) + '</td><td>' + money(p.c.labor) + '</td>' +
-        '<td>' + money(p.c.extras) + '</td><td><strong>' + money(p.c.total) + '</strong></td></tr>';
+        '<td>' + money(p.c.extras) + '</td><td>' + (rateMode ? money(p.c.total) + '</td><td><strong>' + money(p.c.charge) + '</strong>' : '<strong>' + money(p.c.total) + '</strong>') + '</td></tr>';
     });
-    if (C.crewLabor > 0) html += '<tr class="sub"><td>Crew labor (whole job)</td><td></td><td></td><td></td><td></td><td>' + money(C.crewLabor) + '</td><td></td><td>' + money(C.crewLabor) + '</td></tr>';
-    if (C.jobExtras > 0) html += '<tr class="sub"><td>Other job costs</td><td></td><td></td><td></td><td></td><td></td><td>' + money(C.jobExtras) + '</td><td>' + money(C.jobExtras) + '</td></tr>';
+    const padCell = rateMode ? '<td></td>' : '';
+    if (C.crewLabor > 0) html += '<tr class="sub"><td>Crew labor (whole job)</td><td></td><td></td><td></td><td></td><td>' + money(C.crewLabor) + '</td><td></td><td>' + money(C.crewLabor) + '</td>' + padCell + '</tr>';
+    if (C.jobExtras > 0) html += '<tr class="sub"><td>Other job costs</td><td></td><td></td><td></td><td></td><td></td><td>' + money(C.jobExtras) + '</td><td>' + money(C.jobExtras) + '</td>' + padCell + '</tr>';
     html += '</tbody></table></div>';
-    const s = j.settings;
     html += '<div class="totals-stack">' +
       '<div class="t-line"><span class="l">Asphalt to order (incl. ' + s.wastePct + '% waste)</span><span class="v"><strong>' + fmt(C.tonsOrder) + ' tonnes</strong></span></div>' +
       '<div class="t-line"><span class="l">Total cost (material + labor + extras)</span><span class="v">' + money(C.cost) + '</span></div>' +
-      '<div class="t-line"><span class="l">Markup ' + s.markupPct + '%</span><span class="v">' + money(C.price - C.cost) + '</span></div>' +
-      '<div class="t-line"><span class="l">Customer price</span><span class="v">' + money(C.price) + '</span></div>' +
+      (rateMode
+        ? '<div class="t-line"><span class="l">Customer price (area &times; rate)</span><span class="v">' + money(C.price) + '</span></div>'
+        : '<div class="t-line"><span class="l">Markup ' + s.markupPct + '%</span><span class="v">' + money(C.price - C.cost) + '</span></div>' +
+          '<div class="t-line"><span class="l">Customer price</span><span class="v">' + money(C.price) + '</span></div>') +
       '<div class="t-line"><span class="l">Tax ' + s.taxPct + '%</span><span class="v">' + money(C.tax) + '</span></div>' +
       '<div class="t-line big"><span class="l">Quote total</span><span class="v">' + money(C.quote) + '</span></div>' +
       '<div class="t-line profit' + (C.profit < 0 ? ' neg' : '') + '"><span class="l">Your profit</span><span class="v">' + money(C.profit) + '</span></div>' +
@@ -1035,6 +1092,11 @@ function renderSettings() {
   document.getElementById('set-waste').value = s.wastePct;
   document.getElementById('set-markup').value = s.markupPct;
   document.getElementById('set-tax').value = s.taxPct;
+  document.getElementById('set-mode').value = s.pricingMode === 'markup' ? 'markup' : 'rate';
+  document.getElementById('set-rate').value = s.chargeRate || '';
+  document.getElementById('set-rate-unit').value = AREA_UNITS[s.chargeUnit] ? s.chargeUnit : 'yd2';
+  document.getElementById('grp-rate').style.display = s.pricingMode === 'markup' ? 'none' : '';
+  document.getElementById('grp-markup').style.display = s.pricingMode === 'markup' ? '' : 'none';
 }
 
 function renderAll() {
@@ -1049,13 +1111,17 @@ function renderAll() {
 /* lightweight recompute: update outputs only, no input rebuilds */
 function updateComputed() {
   const j = job();
+  const rateMode = j.settings.pricingMode === 'rate';
   j.repairs.forEach(r => {
     const card = repairsList.querySelector('[data-id="' + r.id + '"]');
     if (!card) return;
     const c = calcRepair(r, j.settings);
     const set = (sel, v) => { const el = card.querySelector('[data-out="' + sel + '"]'); if (el) el.textContent = v; };
     set('mini-tons', fmt(c.tonsOrder));
-    set('mini-total', money0(c.total));
+    set('mini-total', money0(rateMode ? c.charge : c.total));
+    set('charge', money(c.charge));
+    const ov = card.querySelector('[data-f="rateov"]');
+    if (ov) ov.placeholder = num(j.settings.chargeRate) || 0;
     set('area', fmt(c.area, 1));
     set('tons', fmt(c.tonsOrder));
     set('material', money(c.material));
@@ -1178,6 +1244,8 @@ repairsList.addEventListener('input', (ev) => {
     r[dim] = num(ftEl.value) + num(inEl.value) / 12;
   } else if (f === 'name') {
     r.name = ev.target.value;
+  } else if (f === 'rateov') {
+    r.rateOverride = ev.target.value === '' ? '' : num(ev.target.value);
   } else if (f === 'depth') {
     r.depthIn = parseInches(ev.target.value);
     card.querySelectorAll('[data-act="depth-chip"]').forEach(ch => ch.classList.toggle('on', Number(ch.dataset.depth) === r.depthIn));
@@ -1261,6 +1329,20 @@ document.getElementById('jobcosts-rows').addEventListener('input', (ev) => {
     updateComputed(); save();
   });
 });
+document.getElementById('set-mode').addEventListener('change', (ev) => {
+  job().settings.pricingMode = ev.target.value === 'markup' ? 'markup' : 'rate';
+  renderSettings(); renderRepairs(); updateComputed(); save();
+});
+document.getElementById('set-rate').addEventListener('input', (ev) => {
+  job().settings.chargeRate = num(ev.target.value);
+  updateComputed(); save();
+});
+document.getElementById('set-rate-unit').addEventListener('change', (ev) => {
+  if (AREA_UNITS[ev.target.value]) {
+    job().settings.chargeUnit = ev.target.value;
+    renderRepairs(); updateComputed(); save();
+  }
+});
 document.getElementById('job-name').addEventListener('input', (ev) => {
   job().name = ev.target.value;
   const opt = document.querySelector('#job-select option[value="' + DB.currentId + '"]');
@@ -1302,6 +1384,7 @@ function buildPrintSheet(mode) {
   const C = calcJob(j);
   const s = j.settings;
   const mk = 1 + s.markupPct / 100;
+  const rateMode = s.pricingMode === 'rate';
   const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   let html = '<h1>' + (mode === 'internal' ? 'Internal Cost Sheet' : 'Asphalt Repair Estimate') + '</h1>' +
     '<div class="p-sub">' + esc(j.name || 'Untitled job') + ' &middot; ' + today + '</div>';
@@ -1309,9 +1392,9 @@ function buildPrintSheet(mode) {
   if (mode === 'customer') {
     html += '<table><thead><tr><th>Item</th><th>Area</th><th>Depth</th><th>Price</th></tr></thead><tbody>';
     C.per.forEach(p => {
-      html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 0) + ' ft&sup2;</td><td>' + (p.r.depthIn || 0) + '"</td><td>' + money(p.c.total * mk) + '</td></tr>';
+      html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 0) + ' ft&sup2;</td><td>' + (p.r.depthIn || 0) + '"</td><td>' + money(rateMode ? p.c.charge : p.c.total * mk) + '</td></tr>';
     });
-    const siteWork = (C.crewLabor + C.jobExtras) * mk;
+    const siteWork = rateMode ? 0 : (C.crewLabor + C.jobExtras) * mk;
     if (siteWork > 0) html += '<tr><td>Site work, crew &amp; equipment</td><td></td><td></td><td>' + money(siteWork) + '</td></tr>';
     html += '</tbody></table>';
     html += '<div class="p-totals">' +
@@ -1321,19 +1404,22 @@ function buildPrintSheet(mode) {
       '</div>' +
       '<div class="p-note">Estimate valid 30 days. Final billing based on measured quantities placed.</div>';
   } else {
-    html += '<table><thead><tr><th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tonnes</th><th>Material</th><th>Labor</th><th>Extras</th><th>Cost</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tonnes</th><th>Material</th><th>Labor</th><th>Extras</th><th>Cost</th>' + (rateMode ? '<th>Charge</th>' : '') + '</tr></thead><tbody>';
     C.per.forEach(p => {
       html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 1) + '</td><td>' + (p.r.depthIn || 0) + '"</td><td>' + fmt(p.c.tonsOrder) + '</td>' +
-        '<td>' + money(p.c.material) + '</td><td>' + money(p.c.labor) + '</td><td>' + money(p.c.extras) + '</td><td>' + money(p.c.total) + '</td></tr>';
+        '<td>' + money(p.c.material) + '</td><td>' + money(p.c.labor) + '</td><td>' + money(p.c.extras) + '</td><td>' + money(p.c.total) + '</td>' + (rateMode ? '<td>' + money(p.c.charge) + '</td>' : '') + '</tr>';
     });
-    if (C.crewLabor > 0) html += '<tr><td>Crew labor (whole job)</td><td></td><td></td><td></td><td></td><td>' + money(C.crewLabor) + '</td><td></td><td>' + money(C.crewLabor) + '</td></tr>';
-    if (C.jobExtras > 0) html += '<tr><td>Other job costs</td><td></td><td></td><td></td><td></td><td></td><td>' + money(C.jobExtras) + '</td><td>' + money(C.jobExtras) + '</td></tr>';
+    const pad = rateMode ? '<td></td>' : '';
+    if (C.crewLabor > 0) html += '<tr><td>Crew labor (whole job)</td><td></td><td></td><td></td><td></td><td>' + money(C.crewLabor) + '</td><td></td><td>' + money(C.crewLabor) + '</td>' + pad + '</tr>';
+    if (C.jobExtras > 0) html += '<tr><td>Other job costs</td><td></td><td></td><td></td><td></td><td></td><td>' + money(C.jobExtras) + '</td><td>' + money(C.jobExtras) + '</td>' + pad + '</tr>';
     html += '</tbody></table>';
     html += '<div class="p-totals">' +
       '<div><span>Asphalt to order</span><span>' + fmt(C.tonsOrder) + ' tonnes</span></div>' +
       '<div><span>Total cost</span><span>' + money(C.cost) + '</span></div>' +
-      '<div><span>Markup ' + s.markupPct + '%</span><span>' + money(C.price - C.cost) + '</span></div>' +
-      '<div><span>Customer price</span><span>' + money(C.price) + '</span></div>' +
+      (rateMode
+        ? '<div><span>Customer price (area &times; rate)</span><span>' + money(C.price) + '</span></div>'
+        : '<div><span>Markup ' + s.markupPct + '%</span><span>' + money(C.price - C.cost) + '</span></div>' +
+          '<div><span>Customer price</span><span>' + money(C.price) + '</span></div>') +
       '<div><span>Tax ' + s.taxPct + '%</span><span>' + money(C.tax) + '</span></div>' +
       '<div class="grand"><span>Quote total</span><span>' + money(C.quote) + '</span></div>' +
       '<div><span>Profit</span><span>' + money(C.profit) + '</span></div>' +
