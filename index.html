@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#22221f">
+<title>Asphalt Job Costing</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --amber:       #BA7517;
+  --amber-bright:#E09A3A;
+  --amber-lt:    #FAEEDA;
+  --amber-dk:    #8a560f;
+  --green-bright:#5fcb88;
+  --green-dk:    #2e7d4f;
+  --red:         #A32D2D;
+  --red-bright:  #ff6b6b;
+  --asphalt:     #22221f;
+  --asphalt-2:   #2C2C2A;
+  --asphalt-lt:  #4a4a47;
+  --gray-mid:    #888780;
+  --gray-lt:     #F1EFE8;
+  --gray-border: #D3D1C7;
+  --bg:          #f7f6f2;
+  --card-bg:     #ffffff;
+  --text:        #1a1a18;
+  --text-muted:  #6b6a66;
+  --text-faint:  #a09f9a;
+  --border:      rgba(0,0,0,0.09);
+  --shadow:      0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+  --hazard: repeating-linear-gradient(-45deg, var(--amber) 0 12px, var(--asphalt) 12px 24px);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 170px;
+}
+input, select, button, textarea { font-family: 'DM Sans', sans-serif; }
+
+/* ── Header ── */
+.hazard-strip { height: 7px; background: var(--hazard); }
+.app-header {
+  background: var(--asphalt);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  padding: 16px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  color: white;
+  letter-spacing: -0.02em;
+}
+.logo .accent { color: var(--amber-bright); }
+.header-sub {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.5);
+  margin-left: auto;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.app-body { max-width: 980px; margin: 0 auto; padding: 16px 14px 40px; }
+
+/* ── Job toolbar ── */
+.job-bar {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+.job-bar .input-group label { margin-bottom: 4px; }
+.job-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Cards & sections ── */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-title .tally {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.card-subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 4px 0 16px;
+  line-height: 1.5;
+}
+.section-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 22px 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--gray-border); }
+
+/* ── Inputs ── */
+.input-group label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+input[type="text"], input[type="number"], select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1.5px solid var(--gray-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+  transition: border-color 0.15s;
+  min-height: 44px;
+}
+input:focus, select:focus { outline: none; border-color: var(--amber); }
+.input-hint { font-size: 11px; color: var(--text-faint); margin-top: 5px; line-height: 1.4; }
+.settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+/* ft + in paired input */
+.ftin { display: flex; gap: 6px; }
+.ftin .u { position: relative; flex: 1; }
+.ftin .u input { padding-right: 28px; text-align: right; }
+.ftin .u::after {
+  content: attr(data-u);
+  position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; font-weight: 600; color: var(--text-faint); pointer-events: none;
+}
+
+/* ── Buttons ── */
+.btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1.5px solid var(--gray-border);
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 42px;
+}
+.btn:hover { border-color: var(--asphalt); }
+.btn.primary { background: var(--amber); border-color: var(--amber); color: white; }
+.btn.primary:hover { background: var(--amber-dk); border-color: var(--amber-dk); }
+.btn.dark { background: var(--asphalt); border-color: var(--asphalt); color: white; }
+.btn.danger { color: var(--red); }
+.btn.small { padding: 6px 11px; min-height: 34px; font-size: 12px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-add-row {
+  width: 100%;
+  border: 1.5px dashed var(--gray-border);
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 11px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 13px;
+  min-height: 44px;
+}
+.btn-add-row:hover { border-color: var(--amber); color: var(--amber-dk); background: var(--amber-lt); }
+.icon-btn {
+  border: none; background: transparent; cursor: pointer;
+  color: var(--text-faint); font-size: 17px; line-height: 1;
+  padding: 8px; border-radius: 6px; min-width: 36px; min-height: 36px;
+}
+.icon-btn:hover { color: var(--red); background: var(--gray-lt); }
+
+/* ── Big add repair ── */
+#btn-add-repair {
+  width: 100%;
+  background: var(--asphalt);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  letter-spacing: 0.02em;
+}
+#btn-add-repair:hover { background: #000; }
+#btn-add-repair .plus { color: var(--amber-bright); margin-right: 8px; font-size: 17px; }
+
+/* ── Repair cards ── */
+.repair-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--amber);
+  border-radius: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.repair-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.repair-idx {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  color: white;
+  background: var(--asphalt);
+  border-radius: 8px;
+  min-width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.repair-head input.r-name {
+  border: none; background: transparent; font-size: 15px; font-weight: 600;
+  padding: 6px 4px; min-height: 36px; border-radius: 6px; min-width: 0; flex: 1;
+}
+.repair-head input.r-name:focus { background: var(--gray-lt); border: none; }
+.repair-mini {
+  text-align: right;
+  flex-shrink: 0;
+  line-height: 1.25;
+}
+.repair-mini .m-tons { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
+.repair-mini .m-total { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; }
+.chev { color: var(--text-faint); font-size: 12px; transition: transform 0.15s; flex-shrink: 0; }
+.repair-card.open .chev { transform: rotate(180deg); }
+.repair-body { display: none; padding: 4px 16px 16px; border-top: 1px solid var(--border); }
+.repair-card.open .repair-body { display: block; }
+
+/* shape segmented control */
+.shape-seg {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+  background: var(--gray-lt); padding: 5px; border-radius: 10px;
+  margin: 14px 0;
+}
+.shape-seg button {
+  border: none; background: transparent; padding: 9px 4px;
+  font-size: 12.5px; font-weight: 600; color: var(--text-muted);
+  border-radius: 7px; cursor: pointer; min-height: 40px;
+}
+.shape-seg button.on { background: var(--asphalt); color: white; box-shadow: 0 2px 6px rgba(0,0,0,0.18); }
+
+.dims-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.depth-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.chip {
+  border: 1.5px solid var(--gray-border); background: white; border-radius: 999px;
+  padding: 7px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--text-muted);
+  min-height: 36px;
+}
+.chip:hover { border-color: var(--amber); color: var(--amber-dk); }
+.chip.on { background: var(--amber); border-color: var(--amber); color: white; }
+
+/* drawn shape block */
+.poly-block {
+  display: flex; gap: 14px; align-items: center;
+  background: var(--gray-lt); border-radius: 10px; padding: 12px; margin-bottom: 14px;
+}
+.poly-thumb { background: var(--asphalt); border-radius: 8px; flex-shrink: 0; }
+.poly-meta { flex: 1; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.poly-meta strong { color: var(--text); font-size: 15px; }
+
+/* computed strip inside repair */
+.calc-strip {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  background: var(--amber-lt);
+  border-radius: 10px; padding: 12px 14px; margin: 14px 0;
+}
+.calc-strip .c-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--amber-dk); }
+.calc-strip .c-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-top: 1px; }
+.calc-strip .c-val .sm { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+
+/* row lists (labor, costs) */
+.row-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.lrow { display: grid; grid-template-columns: 1.6fr 0.9fr 0.8fr auto auto; gap: 6px; align-items: center; }
+.crow { display: grid; grid-template-columns: 2fr 1fr auto; gap: 6px; align-items: center; }
+.lrow .row-total { font-size: 13px; font-weight: 600; text-align: right; min-width: 64px; white-space: nowrap; }
+.crew-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.subtotal-line {
+  display: flex; justify-content: flex-end; gap: 8px;
+  font-size: 12.5px; color: var(--text-muted); margin-top: 6px; font-weight: 500;
+}
+.subtotal-line strong { color: var(--text); }
+
+.repair-total-line {
+  display: flex; align-items: baseline; gap: 10px; justify-content: flex-end;
+  border-top: 1.5px dashed var(--gray-border);
+  margin-top: 16px; padding-top: 12px;
+}
+.repair-total-line .lbl { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); }
+.repair-total-line .val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 21px; }
+.repair-foot { display: flex; gap: 8px; margin-top: 14px; }
+
+/* crew table */
+.crew-row { display: grid; grid-template-columns: 1.7fr 0.9fr 0.9fr auto auto; gap: 6px; align-items: center; }
+.crew-row .row-total { font-size: 13px; font-weight: 600; text-align: right; min-width: 64px; white-space: nowrap; }
+.grid-head { display: grid; gap: 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); padding: 0 2px 2px; }
+.grid-head.crew-row, .grid-head.lrow { min-height: 0; }
+.grid-head span:nth-child(4), .grid-head span:nth-child(5) { min-width: 64px; }
+
+/* ── Summary ── */
+.summary-table-wrap { overflow-x: auto; margin: 0 -4px; }
+.summary-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
+.summary-table th {
+  text-align: right; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-faint); font-weight: 600; padding: 8px 8px; border-bottom: 1.5px solid var(--gray-border);
+}
+.summary-table th:first-child { text-align: left; }
+.summary-table td { padding: 9px 8px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.summary-table td:first-child { text-align: left; font-weight: 600; white-space: normal; }
+.summary-table tr.sub td { color: var(--text-muted); font-weight: 400; }
+.totals-stack { margin-top: 16px; display: flex; flex-direction: column; gap: 7px; max-width: 360px; margin-left: auto; }
+.t-line { display: flex; justify-content: space-between; font-size: 13.5px; }
+.t-line .l { color: var(--text-muted); }
+.t-line.big { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 19px; border-top: 2px solid var(--asphalt); padding-top: 9px; margin-top: 4px; }
+.t-line.profit .v { color: var(--green-dk); font-weight: 700; }
+.t-line.profit.neg .v { color: var(--red); }
+.print-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.print-controls label.radio { display: flex; gap: 6px; align-items: center; font-size: 13px; cursor: pointer; }
+
+/* ── Sticky totals bar ── */
+.results-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--asphalt);
+  border-top: 4px solid var(--amber);
+  color: white;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.18);
+  z-index: 10;
+}
+.results-strip { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.result-cell { min-width: 0; }
+.result-label { font-size: 9.5px; font-weight: 600; color: rgba(255,255,255,0.55); letter-spacing: 0.09em; text-transform: uppercase; margin-bottom: 2px; }
+.result-value { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; white-space: nowrap; }
+.result-value .small { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.6); margin-left: 3px; }
+.result-cell.tons .result-value { color: var(--amber-bright); }
+.result-cell.profit-pos .result-value { color: var(--green-bright); }
+.result-cell.profit-neg .result-value { color: var(--red-bright); }
+
+/* ── Drawing modal ── */
+.draw-modal {
+  position: fixed; inset: 0; z-index: 50; display: none;
+  background: #1b1b18; color: white;
+  flex-direction: column;
+}
+.draw-modal.open { display: flex; }
+.draw-toolbar {
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  padding: 10px 12px calc(10px);
+  background: var(--asphalt);
+  border-bottom: 2px solid var(--amber);
+}
+.draw-toolbar .btn { background: var(--asphalt-2); border-color: #3c3c38; color: #ddd; }
+.draw-toolbar .btn:hover { border-color: var(--amber); }
+.draw-toolbar .btn.primary { background: var(--amber); border-color: var(--amber); color: white; }
+.draw-toolbar .btn.on { background: var(--amber-dk); border-color: var(--amber-dk); color: white; }
+.draw-toolbar select {
+  width: auto; min-height: 42px; padding: 8px 10px; font-size: 13px;
+  background: var(--asphalt-2); color: #ddd; border-color: #3c3c38;
+}
+.draw-toolbar .spacer { flex: 1; }
+.draw-canvas-wrap { flex: 1; position: relative; overflow: hidden; touch-action: none; }
+#dcv { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.draw-status {
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: var(--asphalt);
+  border-top: 1px solid #3c3c38;
+  display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap;
+}
+.draw-status .ds-area { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; color: var(--amber-bright); white-space: nowrap; }
+.draw-status .ds-msg { font-size: 12px; color: rgba(255,255,255,0.55); flex: 1; min-width: 180px; }
+.edge-bar {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 18px; z-index: 60;
+  background: white; color: var(--text);
+  border-radius: 12px; padding: 10px;
+  display: none; gap: 8px; align-items: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+  width: min(92vw, 420px);
+}
+.edge-bar.open { display: flex; }
+.edge-bar input { flex: 1; min-width: 0; }
+
+/* ── Print sheet ── */
+#print-sheet { display: none; }
+@media print {
+  body > *:not(#print-sheet) { display: none !important; }
+  body { padding: 0; background: white; }
+  #print-sheet { display: block; padding: 10px 6px; }
+  #print-sheet h1 { font-family: 'Syne', sans-serif; font-size: 22px; margin-bottom: 2px; }
+  #print-sheet .p-sub { font-size: 12px; color: #555; margin-bottom: 18px; }
+  #print-sheet table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 14px; }
+  #print-sheet th { text-align: right; border-bottom: 1.5px solid #000; padding: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+  #print-sheet th:first-child, #print-sheet td:first-child { text-align: left; }
+  #print-sheet td { padding: 7px 6px; border-bottom: 1px solid #ddd; text-align: right; }
+  #print-sheet .p-totals { max-width: 300px; margin-left: auto; font-size: 13px; }
+  #print-sheet .p-totals div { display: flex; justify-content: space-between; padding: 3px 0; }
+  #print-sheet .p-totals .grand { font-weight: 700; font-size: 16px; border-top: 2px solid #000; padding-top: 7px; margin-top: 5px; }
+  #print-sheet .p-note { font-size: 10.5px; color: #777; margin-top: 22px; }
+}
+
+/* ── Mobile ── */
+@media (max-width: 720px) {
+  body { padding-bottom: 190px; }
+  .app-body { padding: 12px 10px 30px; }
+  .job-bar { grid-template-columns: 1fr; }
+  .settings-grid { grid-template-columns: 1fr 1fr; }
+  .dims-grid { grid-template-columns: 1fr; }
+  .card { padding: 16px 14px; }
+  .results-strip { grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+  .result-value { font-size: 17px; }
+  .poly-block { flex-wrap: wrap; }
+  .poly-block .btn { flex-basis: 100%; }
+  .lrow { grid-template-columns: 1.4fr 0.9fr 0.7fr auto auto; }
+  .crew-row { grid-template-columns: 1.4fr 0.8fr 0.7fr auto auto; }
+  .lrow .row-total, .crew-row .row-total { min-width: 52px; font-size: 12px; }
+  .grid-head span:nth-child(4), .grid-head span:nth-child(5) { min-width: 52px; }
+  .summary-table { font-size: 12px; }
+  .draw-toolbar .btn { padding: 8px 10px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="hazard-strip"></div>
+<header class="app-header">
+  <div class="logo">Asphalt <span class="accent">Costing</span></div>
+  <div class="header-sub">Multi repair estimator</div>
+</header>
+
+<main class="app-body">
+
+  <!-- Job toolbar -->
+  <div class="job-bar">
+    <div class="input-group">
+      <label>Job name</label>
+      <input type="text" id="job-name" placeholder="e.g. Hwy 17 Plaza patching">
+    </div>
+    <div class="input-group">
+      <label>Saved jobs</label>
+      <select id="job-select"></select>
+    </div>
+    <div class="job-actions">
+      <button class="btn" id="btn-new-job">+ New job</button>
+      <button class="btn danger" id="btn-del-job">Delete</button>
+    </div>
+  </div>
+
+  <!-- Repairs -->
+  <div class="section-label">Repairs</div>
+  <div id="repairs-list"></div>
+  <button id="btn-add-repair"><span class="plus">+</span>Add repair</button>
+
+  <!-- Crew -->
+  <div class="section-label">Crew &amp; labor</div>
+  <div class="card" id="crew-card">
+    <div class="card-title">Crew on the job <span class="tally" id="crew-tally"></span></div>
+    <div class="card-subtitle">Add your guys with hourly rates. "Job hours" here covers whole-job labor. You can also assign guys to individual repairs inside each repair card; both add into the total.</div>
+    <div class="grid-head crew-row"><span>Name</span><span>$ / hr</span><span>Job hours</span><span>Total</span><span></span></div>
+    <div class="row-list" id="crew-rows"></div>
+    <button class="btn-add-row" data-act="add-crew">+ Add a guy</button>
+  </div>
+
+  <!-- Job-wide other costs -->
+  <div class="card" id="jobcosts-card">
+    <div class="card-title">Other job costs <span class="tally" id="jobcosts-tally"></span></div>
+    <div class="card-subtitle">Whole-job extras: trucking, equipment rental, disposal, tack coat, permits, fuel. Per-repair extras go inside each repair card.</div>
+    <div class="row-list" id="jobcosts-rows"></div>
+    <button class="btn-add-row" data-act="add-jobcost">+ Add cost</button>
+  </div>
+
+  <!-- Pricing settings -->
+  <div class="section-label">Pricing &amp; material</div>
+  <div class="card">
+    <div class="card-title">Material &amp; quote settings</div>
+    <div class="card-subtitle">Everything is in US tons (2,000 lb), the unit hot mix is sold by. These values persist on this device.</div>
+    <div class="settings-grid">
+      <div class="input-group">
+        <label>Asphalt price ($/ton)</label>
+        <input type="number" id="set-price" step="0.01" min="0" inputmode="decimal" placeholder="e.g. 110">
+        <div class="input-hint">What you pay per ton of hot mix.</div>
+      </div>
+      <div class="input-group">
+        <label>Density (lb/ft³)</label>
+        <input type="number" id="set-density" step="1" min="100" max="200" inputmode="decimal">
+        <div class="input-hint">Compacted hot mix is 145 standard.</div>
+      </div>
+      <div class="input-group">
+        <label>Waste / over-order (%)</label>
+        <input type="number" id="set-waste" step="1" min="0" max="50" inputmode="decimal">
+        <div class="input-hint">5% simple, 10% irregular shapes.</div>
+      </div>
+      <div class="input-group">
+        <label>Markup / profit (%)</label>
+        <input type="number" id="set-markup" step="1" min="0" inputmode="decimal">
+        <div class="input-hint">Added on top of total cost to get your customer price.</div>
+      </div>
+      <div class="input-group">
+        <label>Tax (%)</label>
+        <input type="number" id="set-tax" step="0.1" min="0" inputmode="decimal">
+        <div class="input-hint">GST is 5%.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="section-label">Job summary</div>
+  <div class="card">
+    <div id="summary-body"></div>
+    <div class="print-controls">
+      <label class="radio"><input type="radio" name="printmode" value="customer" checked> Customer quote</label>
+      <label class="radio"><input type="radio" name="printmode" value="internal"> Internal cost sheet</label>
+      <button class="btn dark" id="btn-print" style="margin-left:auto;">Print / PDF</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- Sticky totals -->
+<div class="results-bar">
+  <div class="results-strip">
+    <div class="result-cell tons">
+      <div class="result-label">Tons to order</div>
+      <div class="result-value"><span id="t-tons">0.00</span><span class="small">tons</span></div>
+    </div>
+    <div class="result-cell">
+      <div class="result-label">Job cost</div>
+      <div class="result-value" id="t-cost">$0</div>
+    </div>
+    <div class="result-cell">
+      <div class="result-label">Quote (incl. tax)</div>
+      <div class="result-value" id="t-quote">$0</div>
+    </div>
+    <div class="result-cell" id="t-profit-cell">
+      <div class="result-label">Profit</div>
+      <div class="result-value" id="t-profit">$0</div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawing modal -->
+<div class="draw-modal" id="draw-modal">
+  <div class="draw-toolbar">
+    <button class="btn" id="d-cancel">Cancel</button>
+    <button class="btn" id="d-undo">Undo</button>
+    <button class="btn" id="d-clear">Clear</button>
+    <select id="d-snap" title="Snap precision">
+      <option value="1">Snap 1"</option>
+      <option value="2">Snap 2"</option>
+      <option value="3" selected>Snap 3"</option>
+      <option value="6">Snap 6"</option>
+      <option value="12">Snap 1 ft</option>
+    </select>
+    <button class="btn on" id="d-ortho" title="Snap lines to square angles">90&deg;</button>
+    <button class="btn" id="d-zout">&minus;</button>
+    <button class="btn" id="d-zin">+</button>
+    <button class="btn" id="d-fit">Fit</button>
+    <div class="spacer"></div>
+    <button class="btn" id="d-close-shape">Close shape</button>
+    <button class="btn primary" id="d-done">Done &#10003;</button>
+  </div>
+  <div class="draw-canvas-wrap" id="draw-wrap">
+    <canvas id="dcv"></canvas>
+    <div class="edge-bar" id="edge-bar">
+      <input type="text" id="edge-input" inputmode="text" placeholder='e.g. 12&apos;6" or 12.5'>
+      <button class="btn primary small" id="edge-set">Set</button>
+      <button class="btn small" id="edge-cancel">&times;</button>
+    </div>
+  </div>
+  <div class="draw-status">
+    <span class="ds-area" id="d-area">0 ft&sup2;</span>
+    <span class="ds-msg" id="d-msg">Tap the grid to place corners.</span>
+  </div>
+</div>
+
+<div id="print-sheet"></div>
+
+<script>
+'use strict';
+
+/* ════════════════════ Utilities ════════════════════ */
+function uid() { return 'r' + Math.random().toString(36).slice(2, 10); }
+function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(n, d = 2) {
+  if (!Number.isFinite(n)) n = 0;
+  return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function money(n) {
+  if (!Number.isFinite(n)) n = 0;
+  const sign = n < 0 ? '-' : '';
+  return sign + '$' + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function money0(n) {
+  if (!Number.isFinite(n)) n = 0;
+  const sign = n < 0 ? '-' : '';
+  return sign + '$' + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+/* parse "2", "2.5", "2 1/2", "1/2" as inches */
+function parseInches(str) {
+  if (typeof str === 'number') return Math.max(0, str);
+  if (str == null) return 0;
+  const t = String(str).trim();
+  if (!t) return 0;
+  let m = t.match(/^(\d+(?:\.\d+)?)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (m && Number(m[3]) > 0) return Number(m[1]) + Number(m[2]) / Number(m[3]);
+  m = t.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (m && Number(m[2]) > 0) return Number(m[1]) / Number(m[2]);
+  const n = Number(t);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/* parse a length as feet. Accepts: 12'6", 12' 6, 12 6, 12.5, 12.5', 150", 12ft 6in, 6 1/2" */
+function parseFtIn(str) {
+  if (str == null) return 0;
+  const t = String(str).trim().toLowerCase().replace(/[′’]/g, "'").replace(/[″”]/g, '"');
+  if (!t) return 0;
+  let m = t.match(/^(\d+(?:\.\d+)?)\s*(?:'|ft\.?|feet)\s*(.*)$/);
+  if (m) {
+    const ft = Number(m[1]);
+    const rest = m[2].replace(/("|in\.?|inches)\s*$/, '').trim();
+    const inches = rest ? parseInches(rest) : 0;
+    return ft + inches / 12;
+  }
+  m = t.match(/^(.+?)\s*(?:"|in\.?|inches)$/);
+  if (m) return parseInches(m[1]) / 12;
+  m = t.match(/^(\d+)\s+(\d+(?:\.\d+)?(?:\s+\d+\/\d+)?)$/);
+  if (m) return Number(m[1]) + parseInches(m[2]) / 12;
+  const n = Number(t);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/* format decimal feet as 12'6½" (nearest quarter inch) */
+function fmtFtIn(v) {
+  if (!Number.isFinite(v) || v <= 0) return '0"';
+  let quarters = Math.round(v * 48);
+  let ft = Math.floor(quarters / 48);
+  quarters -= ft * 48;
+  const wholeIn = Math.floor(quarters / 4);
+  const fracIdx = quarters - wholeIn * 4;
+  const frac = ['', '¼', '½', '¾'][fracIdx];
+  let out = '';
+  if (ft > 0) out += ft + "'";
+  if (wholeIn > 0 || frac) out += (wholeIn > 0 ? wholeIn : (frac ? '' : '0')) + frac + '"';
+  if (!out) out = ft + "'";
+  return out;
+}
+function splitFt(v) {
+  if (!Number.isFinite(v) || v <= 0) return { ft: '', inch: '' };
+  let ft = Math.floor(v + 1e-9);
+  let inch = Math.round((v - ft) * 12 * 4) / 4;
+  if (inch >= 12) { ft += 1; inch = 0; }
+  return { ft: ft || '', inch: inch || '' };
+}
+function shoelace(verts) {
+  if (!verts || verts.length < 3) return 0;
+  let s = 0;
+  for (let i = 0; i < verts.length; i++) {
+    const j = (i + 1) % verts.length;
+    s += verts[i].x * verts[j].y - verts[j].x * verts[i].y;
+  }
+  return Math.abs(s) / 2;
+}
+
+/* ════════════════════ State ════════════════════ */
+const STORE_KEY = 'asphalt-costing-v3';
+const OLD_SETTINGS_KEY = 'asphalt-calc-settings-v2';
+const DEFAULT_SETTINGS = { pricePerTon: 0, density: 145, wastePct: 5, markupPct: 0, taxPct: 5 };
+
+function newRepair(n) {
+  return { id: uid(), name: 'Repair ' + n, shape: 'rect',
+    L: 0, W: 0, D: 0, B: 0, H: 0, depthIn: 2,
+    poly: null, labor: [], costs: [] };
+}
+function newJob(name) {
+  return { id: uid(), name: name || 'New job', created: new Date().toISOString().slice(0, 10),
+    settings: { ...DEFAULT_SETTINGS }, crew: [], jobCosts: [], repairs: [newRepair(1)] };
+}
+
+let DB = { jobs: [], currentId: null };
+const ui = { open: new Set() };
+
+function migrateOldSettings(job) {
+  try {
+    const raw = localStorage.getItem(OLD_SETTINGS_KEY);
+    if (!raw) return;
+    const old = JSON.parse(raw);
+    if (num(old.asphaltCost) > 0) job.settings.pricePerTon = num(old.asphaltCost);
+    if (num(old.density) > 0) job.settings.density = num(old.density);
+    if (Number.isFinite(old.wastePct)) job.settings.wastePct = num(old.wastePct);
+  } catch (e) {}
+}
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.jobs) && parsed.jobs.length) {
+        DB = parsed;
+        if (!DB.jobs.find(j => j.id === DB.currentId)) DB.currentId = DB.jobs[0].id;
+        return;
+      }
+    }
+  } catch (e) {}
+  const job = newJob('Job 1');
+  migrateOldSettings(job);
+  DB = { jobs: [job], currentId: job.id };
+}
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); } catch (e) {}
+  }, 300);
+}
+function job() { return DB.jobs.find(j => j.id === DB.currentId); }
+
+/* ════════════════════ Calculations ════════════════════ */
+function repairArea(r) {
+  if (r.shape === 'rect') return r.L * r.W;
+  if (r.shape === 'circle') return Math.PI * Math.pow(r.D / 2, 2);
+  if (r.shape === 'tri') return 0.5 * r.B * r.H;
+  if (r.shape === 'poly') return r.poly && r.poly.closed ? shoelace(r.poly.verts) : 0;
+  return 0;
+}
+function calcRepair(r, s) {
+  const area = repairArea(r);
+  const volFt3 = area * (r.depthIn / 12);
+  const tons = volFt3 * s.density / 2000;
+  const tonsOrder = tons * (1 + s.wastePct / 100);
+  const material = tonsOrder * s.pricePerTon;
+  const labor = r.labor.reduce((a, l) => a + num(l.rate) * num(l.hours), 0);
+  const extras = r.costs.reduce((a, c) => a + num(c.amount), 0);
+  return { area, volFt3, tons, tonsOrder, material, labor, extras, total: material + labor + extras };
+}
+function calcJob(j) {
+  const s = j.settings;
+  const per = j.repairs.map(r => ({ r, c: calcRepair(r, s) }));
+  const sum = (k) => per.reduce((a, p) => a + p.c[k], 0);
+  const crewLabor = j.crew.reduce((a, m) => a + num(m.rate) * num(m.hours), 0);
+  const jobExtras = j.jobCosts.reduce((a, c) => a + num(c.amount), 0);
+  const cost = sum('total') + crewLabor + jobExtras;
+  const price = cost * (1 + s.markupPct / 100);
+  const tax = price * s.taxPct / 100;
+  return {
+    per,
+    area: sum('area'), tons: sum('tons'), tonsOrder: sum('tonsOrder'),
+    material: sum('material'),
+    repairLabor: sum('labor'), repairExtras: sum('extras'),
+    crewLabor, jobExtras,
+    labor: sum('labor') + crewLabor,
+    cost, price, tax, quote: price + tax, profit: price - cost
+  };
+}
+
+/* ════════════════════ Render: repairs ════════════════════ */
+const repairsList = document.getElementById('repairs-list');
+
+function ftinInputs(rid, dim, label, val) {
+  const p = splitFt(val);
+  return '<div class="input-group"><label>' + label + '</label>' +
+    '<div class="ftin">' +
+    '<span class="u" data-u="ft"><input type="number" inputmode="decimal" min="0" step="1" data-dim="' + dim + '" data-part="ft" value="' + p.ft + '" placeholder="0"></span>' +
+    '<span class="u" data-u="in"><input type="number" inputmode="decimal" min="0" step="0.25" data-dim="' + dim + '" data-part="in" value="' + p.inch + '" placeholder="0"></span>' +
+    '</div></div>';
+}
+function dimsBlock(r) {
+  if (r.shape === 'rect') {
+    return '<div class="dims-grid">' + ftinInputs(r.id, 'L', 'Length', r.L) + ftinInputs(r.id, 'W', 'Width', r.W) + '</div>';
+  }
+  if (r.shape === 'circle') {
+    return '<div class="dims-grid">' + ftinInputs(r.id, 'D', 'Diameter', r.D) + '<div></div></div>';
+  }
+  if (r.shape === 'tri') {
+    return '<div class="dims-grid">' + ftinInputs(r.id, 'B', 'Base', r.B) + ftinInputs(r.id, 'H', 'Height (square to base)', r.H) + '</div>';
+  }
+  const hasShape = r.poly && r.poly.closed && r.poly.verts.length >= 3;
+  const area = hasShape ? shoelace(r.poly.verts) : 0;
+  return '<div class="poly-block">' +
+    '<canvas class="poly-thumb" width="110" height="78" data-thumb></canvas>' +
+    '<div class="poly-meta">' +
+    (hasShape
+      ? '<strong>' + fmt(area, 1) + ' ft&sup2;</strong><br>' + r.poly.verts.length + ' corners, drawn to the inch'
+      : 'No shape drawn yet.<br>Open the drawing pad and trace the repair.') +
+    '</div>' +
+    '<button class="btn primary" data-act="draw">' + (hasShape ? 'Edit drawing' : 'Draw shape') + '</button>' +
+    '</div>';
+}
+const DEPTH_CHIPS = [1, 1.5, 2, 2.5, 3, 4];
+function laborRows(list) {
+  return list.map(l =>
+    '<div class="lrow" data-row="' + l.id + '">' +
+    '<input type="text" data-f="lname" value="' + esc(l.name) + '" placeholder="Name">' +
+    '<input type="number" data-f="lrate" inputmode="decimal" min="0" step="0.5" value="' + (l.rate || '') + '" placeholder="$/hr">' +
+    '<input type="number" data-f="lhours" inputmode="decimal" min="0" step="0.5" value="' + (l.hours || '') + '" placeholder="hrs">' +
+    '<span class="row-total" data-out="lt">' + money(num(l.rate) * num(l.hours)) + '</span>' +
+    '<button class="icon-btn" data-act="del-labor" title="Remove">&times;</button>' +
+    '</div>').join('');
+}
+function costRows(list, delAct) {
+  return list.map(c =>
+    '<div class="crow" data-row="' + c.id + '">' +
+    '<input type="text" data-f="clabel" value="' + esc(c.label) + '" placeholder="e.g. Saw cutting, tack coat">' +
+    '<input type="number" data-f="camount" inputmode="decimal" min="0" step="1" value="' + (c.amount || '') + '" placeholder="$">' +
+    '<button class="icon-btn" data-act="' + delAct + '" title="Remove">&times;</button>' +
+    '</div>').join('');
+}
+function crewChips(r) {
+  const j = job();
+  const used = new Set(r.labor.map(l => l.name.toLowerCase()));
+  const avail = j.crew.filter(m => m.name && !used.has(m.name.toLowerCase()));
+  if (!avail.length) return '';
+  return '<div class="crew-chips">' + avail.map(m =>
+    '<button class="chip" data-act="labor-chip" data-crew="' + m.id + '">+ ' + esc(m.name) + '</button>').join('') + '</div>';
+}
+
+function repairCard(r, idx) {
+  const c = calcRepair(r, job().settings);
+  const open = ui.open.has(r.id);
+  const shapes = [['rect', 'Rectangle'], ['circle', 'Circle'], ['tri', 'Triangle'], ['poly', 'Draw it']];
+  return '<div class="repair-card' + (open ? ' open' : '') + '" data-id="' + r.id + '">' +
+    '<div class="repair-head" data-act="toggle">' +
+      '<div class="repair-idx">' + (idx + 1) + '</div>' +
+      '<input type="text" class="r-name" data-f="name" value="' + esc(r.name) + '" aria-label="Repair name">' +
+      '<div class="repair-mini">' +
+        '<div class="m-tons"><span data-out="mini-tons">' + fmt(c.tonsOrder) + '</span> tons</div>' +
+        '<div class="m-total" data-out="mini-total">' + money0(c.total) + '</div>' +
+      '</div>' +
+      '<span class="chev">&#9660;</span>' +
+    '</div>' +
+    '<div class="repair-body">' +
+      '<div class="shape-seg">' + shapes.map(([k, lbl]) =>
+        '<button data-act="shape" data-shape="' + k + '" class="' + (r.shape === k ? 'on' : '') + '">' + lbl + '</button>').join('') + '</div>' +
+      dimsBlock(r) +
+      '<div class="input-group"><label>Asphalt depth (inches)</label>' +
+        '<div class="depth-row">' +
+        '<input type="text" inputmode="decimal" data-f="depth" value="' + (r.depthIn || '') + '" placeholder="e.g. 2 or 2 1/2" style="max-width:130px;">' +
+        DEPTH_CHIPS.map(d => '<button class="chip' + (r.depthIn === d ? ' on' : '') + '" data-act="depth-chip" data-depth="' + d + '">' + d + '"</button>').join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="calc-strip">' +
+        '<div><div class="c-label">Area</div><div class="c-val"><span data-out="area">' + fmt(c.area, 1) + '</span><span class="sm"> ft&sup2;</span></div></div>' +
+        '<div><div class="c-label">Asphalt</div><div class="c-val"><span data-out="tons">' + fmt(c.tonsOrder) + '</span><span class="sm"> tons</span></div></div>' +
+        '<div><div class="c-label">Material $</div><div class="c-val" data-out="material">' + money(c.material) + '</div></div>' +
+      '</div>' +
+      '<div class="section-label" style="margin-top:16px;">Labor on this repair</div>' +
+      (r.labor.length ? '<div class="grid-head lrow"><span>Name</span><span>$ / hr</span><span>Hours</span><span>Total</span><span></span></div>' : '') +
+      '<div class="row-list">' + laborRows(r.labor) + '</div>' +
+      crewChips(r) +
+      '<button class="btn-add-row" data-act="add-labor">+ Add labor</button>' +
+      '<div class="subtotal-line">Labor: <strong data-out="labor">' + money(c.labor) + '</strong></div>' +
+      '<div class="section-label" style="margin-top:14px;">Other costs on this repair</div>' +
+      '<div class="row-list">' + costRows(r.costs, 'del-cost') + '</div>' +
+      '<button class="btn-add-row" data-act="add-cost">+ Add cost</button>' +
+      '<div class="subtotal-line">Extras: <strong data-out="extras">' + money(c.extras) + '</strong></div>' +
+      '<div class="repair-total-line"><span class="lbl">Repair total (cost)</span><span class="val" data-out="total">' + money(c.total) + '</span></div>' +
+      '<div class="repair-foot">' +
+        '<button class="btn small" data-act="dup">Duplicate</button>' +
+        '<button class="btn small danger" data-act="del" style="margin-left:auto;">Delete repair</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function drawThumb(cv, verts) {
+  const ctx = cv.getContext('2d');
+  const w = cv.width, h = cv.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#22221f';
+  ctx.fillRect(0, 0, w, h);
+  if (!verts || verts.length < 3) return;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  verts.forEach(v => { minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x); minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y); });
+  const spanX = Math.max(maxX - minX, 0.5), spanY = Math.max(maxY - minY, 0.5);
+  const sc = Math.min((w - 16) / spanX, (h - 16) / spanY);
+  const ox = (w - spanX * sc) / 2 - minX * sc;
+  const oy = h - ((h - spanY * sc) / 2 - minY * sc);
+  ctx.beginPath();
+  verts.forEach((v, i) => {
+    const x = ox + v.x * sc, y = oy - v.y * sc - (h - 0) * 0 ;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(224,154,58,0.25)';
+  ctx.fill();
+  ctx.strokeStyle = '#E09A3A';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function renderRepairs() {
+  const j = job();
+  repairsList.innerHTML = j.repairs.map((r, i) => repairCard(r, i)).join('');
+  j.repairs.forEach(r => {
+    if (r.shape === 'poly' && r.poly && r.poly.closed) {
+      const card = repairsList.querySelector('[data-id="' + r.id + '"] [data-thumb]');
+      if (card) drawThumb(card, r.poly.verts);
+    }
+  });
+}
+
+/* ════════════════════ Render: crew & job costs ════════════════════ */
+function renderCrew() {
+  const j = job();
+  document.getElementById('crew-rows').innerHTML = j.crew.map(m =>
+    '<div class="crew-row" data-row="' + m.id + '">' +
+    '<input type="text" data-f="mname" value="' + esc(m.name) + '" placeholder="Name">' +
+    '<input type="number" data-f="mrate" inputmode="decimal" min="0" step="0.5" value="' + (m.rate || '') + '" placeholder="$/hr">' +
+    '<input type="number" data-f="mhours" inputmode="decimal" min="0" step="0.5" value="' + (m.hours || '') + '" placeholder="hrs">' +
+    '<span class="row-total" data-out="mt">' + money(num(m.rate) * num(m.hours)) + '</span>' +
+    '<button class="icon-btn" data-act="del-crew" title="Remove">&times;</button>' +
+    '</div>').join('');
+  updateCrewTally();
+}
+function updateCrewTally() {
+  const j = job();
+  const guys = j.crew.filter(m => m.name).length;
+  const hrs = j.crew.reduce((a, m) => a + num(m.hours), 0);
+  const total = j.crew.reduce((a, m) => a + num(m.rate) * num(m.hours), 0);
+  document.getElementById('crew-tally').textContent = guys ? guys + ' guys, ' + fmt(hrs, 1) + ' hrs, ' + money(total) : '';
+}
+function renderJobCosts() {
+  const j = job();
+  document.getElementById('jobcosts-rows').innerHTML = costRows(j.jobCosts, 'del-jobcost');
+  updateJobCostsTally();
+}
+function updateJobCostsTally() {
+  const total = job().jobCosts.reduce((a, c) => a + num(c.amount), 0);
+  document.getElementById('jobcosts-tally').textContent = total ? money(total) : '';
+}
+
+/* ════════════════════ Render: summary & totals ════════════════════ */
+function renderSummary() {
+  const j = job();
+  const C = calcJob(j);
+  let html = '';
+  if (!j.repairs.length) {
+    html = '<div class="card-subtitle">Add a repair to see the breakdown.</div>';
+  } else {
+    html = '<div class="summary-table-wrap"><table class="summary-table"><thead><tr>' +
+      '<th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tons</th><th>Material</th><th>Labor</th><th>Extras</th><th>Total</th>' +
+      '</tr></thead><tbody>';
+    C.per.forEach(p => {
+      html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 1) + '</td><td>' + (p.r.depthIn || 0) + '"</td>' +
+        '<td>' + fmt(p.c.tonsOrder) + '</td><td>' + money(p.c.material) + '</td><td>' + money(p.c.labor) + '</td>' +
+        '<td>' + money(p.c.extras) + '</td><td><strong>' + money(p.c.total) + '</strong></td></tr>';
+    });
+    if (C.crewLabor > 0) html += '<tr class="sub"><td>Crew labor (whole job)</td><td></td><td></td><td></td><td></td><td>' + money(C.crewLabor) + '</td><td></td><td>' + money(C.crewLabor) + '</td></tr>';
+    if (C.jobExtras > 0) html += '<tr class="sub"><td>Other job costs</td><td></td><td></td><td></td><td></td><td></td><td>' + money(C.jobExtras) + '</td><td>' + money(C.jobExtras) + '</td></tr>';
+    html += '</tbody></table></div>';
+    const s = j.settings;
+    html += '<div class="totals-stack">' +
+      '<div class="t-line"><span class="l">Asphalt to order (incl. ' + s.wastePct + '% waste)</span><span class="v"><strong>' + fmt(C.tonsOrder) + ' tons</strong></span></div>' +
+      '<div class="t-line"><span class="l">Total cost (material + labor + extras)</span><span class="v">' + money(C.cost) + '</span></div>' +
+      '<div class="t-line"><span class="l">Markup ' + s.markupPct + '%</span><span class="v">' + money(C.price - C.cost) + '</span></div>' +
+      '<div class="t-line"><span class="l">Customer price</span><span class="v">' + money(C.price) + '</span></div>' +
+      '<div class="t-line"><span class="l">Tax ' + s.taxPct + '%</span><span class="v">' + money(C.tax) + '</span></div>' +
+      '<div class="t-line big"><span class="l">Quote total</span><span class="v">' + money(C.quote) + '</span></div>' +
+      '<div class="t-line profit' + (C.profit < 0 ? ' neg' : '') + '"><span class="l">Your profit</span><span class="v">' + money(C.profit) + '</span></div>' +
+      '</div>';
+  }
+  document.getElementById('summary-body').innerHTML = html;
+}
+function renderTotalsBar() {
+  const C = calcJob(job());
+  document.getElementById('t-tons').textContent = fmt(C.tonsOrder);
+  document.getElementById('t-cost').textContent = money0(C.cost);
+  document.getElementById('t-quote').textContent = money0(C.quote);
+  document.getElementById('t-profit').textContent = money0(C.profit);
+  const cell = document.getElementById('t-profit-cell');
+  cell.classList.remove('profit-pos', 'profit-neg');
+  if (C.profit > 0) cell.classList.add('profit-pos');
+  else if (C.profit < 0) cell.classList.add('profit-neg');
+}
+function renderJobsSelect() {
+  const sel = document.getElementById('job-select');
+  sel.innerHTML = DB.jobs.map(jb => '<option value="' + jb.id + '"' + (jb.id === DB.currentId ? ' selected' : '') + '>' + esc(jb.name) + '</option>').join('');
+  document.getElementById('job-name').value = job().name;
+}
+function renderSettings() {
+  const s = job().settings;
+  document.getElementById('set-price').value = s.pricePerTon || '';
+  document.getElementById('set-density').value = s.density;
+  document.getElementById('set-waste').value = s.wastePct;
+  document.getElementById('set-markup').value = s.markupPct;
+  document.getElementById('set-tax').value = s.taxPct;
+}
+
+function renderAll() {
+  renderJobsSelect();
+  renderSettings();
+  renderRepairs();
+  renderCrew();
+  renderJobCosts();
+  renderSummary();
+  renderTotalsBar();
+}
+/* lightweight recompute: update outputs only, no input rebuilds */
+function updateComputed() {
+  const j = job();
+  j.repairs.forEach(r => {
+    const card = repairsList.querySelector('[data-id="' + r.id + '"]');
+    if (!card) return;
+    const c = calcRepair(r, j.settings);
+    const set = (sel, v) => { const el = card.querySelector('[data-out="' + sel + '"]'); if (el) el.textContent = v; };
+    set('mini-tons', fmt(c.tonsOrder));
+    set('mini-total', money0(c.total));
+    set('area', fmt(c.area, 1));
+    set('tons', fmt(c.tonsOrder));
+    set('material', money(c.material));
+    set('labor', money(c.labor));
+    set('extras', money(c.extras));
+    set('total', money(c.total));
+    r.labor.forEach(l => {
+      const row = card.querySelector('[data-row="' + l.id + '"] [data-out="lt"]');
+      if (row) row.textContent = money(num(l.rate) * num(l.hours));
+    });
+  });
+  j.crew.forEach(m => {
+    const row = document.querySelector('#crew-rows [data-row="' + m.id + '"] [data-out="mt"]');
+    if (row) row.textContent = money(num(m.rate) * num(m.hours));
+  });
+  updateCrewTally();
+  updateJobCostsTally();
+  renderSummary();
+  renderTotalsBar();
+}
+
+/* ════════════════════ Events: repairs ════════════════════ */
+document.getElementById('btn-add-repair').addEventListener('click', () => {
+  const j = job();
+  const r = newRepair(j.repairs.length + 1);
+  j.repairs.push(r);
+  ui.open.clear();
+  ui.open.add(r.id);
+  renderRepairs(); renderSummary(); renderTotalsBar(); save();
+  const card = repairsList.querySelector('[data-id="' + r.id + '"]');
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+repairsList.addEventListener('click', (ev) => {
+  const actEl = ev.target.closest('[data-act]');
+  if (!actEl) return;
+  const card = ev.target.closest('.repair-card');
+  if (!card) return;
+  const j = job();
+  const r = j.repairs.find(x => x.id === card.dataset.id);
+  if (!r) return;
+  const act = actEl.dataset.act;
+
+  if (act === 'toggle') {
+    if (ev.target.closest('input')) return;
+    if (ui.open.has(r.id)) ui.open.delete(r.id); else ui.open.add(r.id);
+    card.classList.toggle('open');
+    return;
+  }
+  if (act === 'shape') {
+    r.shape = actEl.dataset.shape;
+    renderRepairs(); updateComputed(); save();
+    return;
+  }
+  if (act === 'depth-chip') {
+    r.depthIn = Number(actEl.dataset.depth);
+    renderRepairs(); updateComputed(); save();
+    return;
+  }
+  if (act === 'draw') { openDraw(r); return; }
+  if (act === 'add-labor') {
+    r.labor.push({ id: uid(), name: '', rate: '', hours: '' });
+    renderRepairs(); save();
+    return;
+  }
+  if (act === 'labor-chip') {
+    const m = j.crew.find(x => x.id === actEl.dataset.crew);
+    if (m) { r.labor.push({ id: uid(), name: m.name, rate: m.rate, hours: '' }); renderRepairs(); updateComputed(); save(); }
+    return;
+  }
+  if (act === 'del-labor') {
+    const rowId = ev.target.closest('[data-row]').dataset.row;
+    r.labor = r.labor.filter(l => l.id !== rowId);
+    renderRepairs(); updateComputed(); save();
+    return;
+  }
+  if (act === 'add-cost') {
+    r.costs.push({ id: uid(), label: '', amount: '' });
+    renderRepairs(); save();
+    return;
+  }
+  if (act === 'del-cost') {
+    const rowId = ev.target.closest('[data-row]').dataset.row;
+    r.costs = r.costs.filter(c => c.id !== rowId);
+    renderRepairs(); updateComputed(); save();
+    return;
+  }
+  if (act === 'dup') {
+    const copy = JSON.parse(JSON.stringify(r));
+    copy.id = uid();
+    copy.name = r.name + ' copy';
+    copy.labor.forEach(l => l.id = uid());
+    copy.costs.forEach(c => c.id = uid());
+    j.repairs.splice(j.repairs.indexOf(r) + 1, 0, copy);
+    ui.open.add(copy.id);
+    renderRepairs(); updateComputed(); save();
+    return;
+  }
+  if (act === 'del') {
+    if (!confirm('Delete "' + r.name + '"?')) return;
+    j.repairs = j.repairs.filter(x => x.id !== r.id);
+    ui.open.delete(r.id);
+    renderRepairs(); updateComputed(); save();
+    return;
+  }
+});
+
+repairsList.addEventListener('input', (ev) => {
+  const card = ev.target.closest('.repair-card');
+  if (!card) return;
+  const r = job().repairs.find(x => x.id === card.dataset.id);
+  if (!r) return;
+  const f = ev.target.dataset.f;
+  const dim = ev.target.dataset.dim;
+
+  if (dim) {
+    const wrap = ev.target.closest('.ftin');
+    const ftEl = wrap.querySelector('[data-part="ft"]');
+    const inEl = wrap.querySelector('[data-part="in"]');
+    r[dim] = num(ftEl.value) + num(inEl.value) / 12;
+  } else if (f === 'name') {
+    r.name = ev.target.value;
+  } else if (f === 'depth') {
+    r.depthIn = parseInches(ev.target.value);
+    card.querySelectorAll('[data-act="depth-chip"]').forEach(ch => ch.classList.toggle('on', Number(ch.dataset.depth) === r.depthIn));
+  } else if (f === 'lname' || f === 'lrate' || f === 'lhours') {
+    const rowId = ev.target.closest('[data-row]').dataset.row;
+    const l = r.labor.find(x => x.id === rowId);
+    if (l) {
+      if (f === 'lname') l.name = ev.target.value;
+      if (f === 'lrate') l.rate = num(ev.target.value);
+      if (f === 'lhours') l.hours = num(ev.target.value);
+    }
+  } else if (f === 'clabel' || f === 'camount') {
+    const rowId = ev.target.closest('[data-row]').dataset.row;
+    const c = r.costs.find(x => x.id === rowId);
+    if (c) {
+      if (f === 'clabel') c.label = ev.target.value;
+      if (f === 'camount') c.amount = num(ev.target.value);
+    }
+  }
+  updateComputed(); save();
+});
+
+/* ════════════════════ Events: crew & job costs ════════════════════ */
+document.getElementById('crew-card').addEventListener('click', (ev) => {
+  const actEl = ev.target.closest('[data-act]');
+  if (!actEl) return;
+  const j = job();
+  if (actEl.dataset.act === 'add-crew') {
+    j.crew.push({ id: uid(), name: '', rate: '', hours: '' });
+    renderCrew(); renderRepairs(); save();
+  }
+  if (actEl.dataset.act === 'del-crew') {
+    const rowId = ev.target.closest('[data-row]').dataset.row;
+    j.crew = j.crew.filter(m => m.id !== rowId);
+    renderCrew(); renderRepairs(); updateComputed(); save();
+  }
+});
+document.getElementById('crew-rows').addEventListener('input', (ev) => {
+  const rowId = ev.target.closest('[data-row]');
+  if (!rowId) return;
+  const m = job().crew.find(x => x.id === rowId.dataset.row);
+  if (!m) return;
+  const f = ev.target.dataset.f;
+  if (f === 'mname') { m.name = ev.target.value; renderRepairs(); }
+  if (f === 'mrate') m.rate = num(ev.target.value);
+  if (f === 'mhours') m.hours = num(ev.target.value);
+  updateComputed(); save();
+});
+document.getElementById('jobcosts-card').addEventListener('click', (ev) => {
+  const actEl = ev.target.closest('[data-act]');
+  if (!actEl) return;
+  const j = job();
+  if (actEl.dataset.act === 'add-jobcost') {
+    j.jobCosts.push({ id: uid(), label: '', amount: '' });
+    renderJobCosts(); save();
+  }
+  if (actEl.dataset.act === 'del-jobcost') {
+    const rowId = ev.target.closest('[data-row]').dataset.row;
+    j.jobCosts = j.jobCosts.filter(c => c.id !== rowId);
+    renderJobCosts(); updateComputed(); save();
+  }
+});
+document.getElementById('jobcosts-rows').addEventListener('input', (ev) => {
+  const rowEl = ev.target.closest('[data-row]');
+  if (!rowEl) return;
+  const c = job().jobCosts.find(x => x.id === rowEl.dataset.row);
+  if (!c) return;
+  const f = ev.target.dataset.f;
+  if (f === 'clabel') c.label = ev.target.value;
+  if (f === 'camount') c.amount = num(ev.target.value);
+  updateComputed(); save();
+});
+
+/* ════════════════════ Events: settings & job bar ════════════════════ */
+[['set-price', 'pricePerTon'], ['set-density', 'density'], ['set-waste', 'wastePct'], ['set-markup', 'markupPct'], ['set-tax', 'taxPct']].forEach(([id, key]) => {
+  document.getElementById(id).addEventListener('input', (ev) => {
+    const s = job().settings;
+    const v = num(ev.target.value);
+    s[key] = v >= 0 ? v : DEFAULT_SETTINGS[key];
+    if (key === 'density' && v <= 0) s.density = DEFAULT_SETTINGS.density;
+    updateComputed(); save();
+  });
+});
+document.getElementById('job-name').addEventListener('input', (ev) => {
+  job().name = ev.target.value;
+  const opt = document.querySelector('#job-select option[value="' + DB.currentId + '"]');
+  if (opt) opt.textContent = ev.target.value || 'Untitled job';
+  save();
+});
+document.getElementById('job-select').addEventListener('change', (ev) => {
+  DB.currentId = ev.target.value;
+  ui.open.clear();
+  renderAll(); save();
+});
+document.getElementById('btn-new-job').addEventListener('click', () => {
+  const jb = newJob('Job ' + (DB.jobs.length + 1));
+  const cur = job();
+  if (cur) jb.settings = { ...cur.settings };
+  DB.jobs.push(jb);
+  DB.currentId = jb.id;
+  ui.open.clear();
+  ui.open.add(jb.repairs[0].id);
+  renderAll(); save();
+});
+document.getElementById('btn-del-job').addEventListener('click', () => {
+  if (!confirm('Delete this whole job and all its repairs?')) return;
+  DB.jobs = DB.jobs.filter(jb => jb.id !== DB.currentId);
+  if (!DB.jobs.length) DB.jobs.push(newJob('Job 1'));
+  DB.currentId = DB.jobs[0].id;
+  ui.open.clear();
+  renderAll(); save();
+});
+
+/* ════════════════════ Print ════════════════════ */
+document.getElementById('btn-print').addEventListener('click', () => {
+  const mode = document.querySelector('input[name="printmode"]:checked').value;
+  buildPrintSheet(mode);
+  window.print();
+});
+function buildPrintSheet(mode) {
+  const j = job();
+  const C = calcJob(j);
+  const s = j.settings;
+  const mk = 1 + s.markupPct / 100;
+  const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  let html = '<h1>' + (mode === 'internal' ? 'Internal Cost Sheet' : 'Asphalt Repair Estimate') + '</h1>' +
+    '<div class="p-sub">' + esc(j.name || 'Untitled job') + ' &middot; ' + today + '</div>';
+
+  if (mode === 'customer') {
+    html += '<table><thead><tr><th>Item</th><th>Area</th><th>Depth</th><th>Price</th></tr></thead><tbody>';
+    C.per.forEach(p => {
+      html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 0) + ' ft&sup2;</td><td>' + (p.r.depthIn || 0) + '"</td><td>' + money(p.c.total * mk) + '</td></tr>';
+    });
+    const siteWork = (C.crewLabor + C.jobExtras) * mk;
+    if (siteWork > 0) html += '<tr><td>Site work, crew &amp; equipment</td><td></td><td></td><td>' + money(siteWork) + '</td></tr>';
+    html += '</tbody></table>';
+    html += '<div class="p-totals">' +
+      '<div><span>Subtotal</span><span>' + money(C.price) + '</span></div>' +
+      '<div><span>Tax (' + s.taxPct + '%)</span><span>' + money(C.tax) + '</span></div>' +
+      '<div class="grand"><span>Total</span><span>' + money(C.quote) + '</span></div>' +
+      '</div>' +
+      '<div class="p-note">Estimate valid 30 days. Final billing based on measured quantities placed.</div>';
+  } else {
+    html += '<table><thead><tr><th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tons</th><th>Material</th><th>Labor</th><th>Extras</th><th>Cost</th></tr></thead><tbody>';
+    C.per.forEach(p => {
+      html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 1) + '</td><td>' + (p.r.depthIn || 0) + '"</td><td>' + fmt(p.c.tonsOrder) + '</td>' +
+        '<td>' + money(p.c.material) + '</td><td>' + money(p.c.labor) + '</td><td>' + money(p.c.extras) + '</td><td>' + money(p.c.total) + '</td></tr>';
+    });
+    if (C.crewLabor > 0) html += '<tr><td>Crew labor (whole job)</td><td></td><td></td><td></td><td></td><td>' + money(C.crewLabor) + '</td><td></td><td>' + money(C.crewLabor) + '</td></tr>';
+    if (C.jobExtras > 0) html += '<tr><td>Other job costs</td><td></td><td></td><td></td><td></td><td></td><td>' + money(C.jobExtras) + '</td><td>' + money(C.jobExtras) + '</td></tr>';
+    html += '</tbody></table>';
+    html += '<div class="p-totals">' +
+      '<div><span>Asphalt to order</span><span>' + fmt(C.tonsOrder) + ' tons</span></div>' +
+      '<div><span>Total cost</span><span>' + money(C.cost) + '</span></div>' +
+      '<div><span>Markup ' + s.markupPct + '%</span><span>' + money(C.price - C.cost) + '</span></div>' +
+      '<div><span>Customer price</span><span>' + money(C.price) + '</span></div>' +
+      '<div><span>Tax ' + s.taxPct + '%</span><span>' + money(C.tax) + '</span></div>' +
+      '<div class="grand"><span>Quote total</span><span>' + money(C.quote) + '</span></div>' +
+      '<div><span>Profit</span><span>' + money(C.profit) + '</span></div>' +
+      '</div>';
+  }
+  document.getElementById('print-sheet').innerHTML = html;
+}
+
+/* ════════════════════ Drawing pad ════════════════════ */
+const dModal = document.getElementById('draw-modal');
+const dcv = document.getElementById('dcv');
+const dctx = dcv.getContext('2d');
+const dWrap = document.getElementById('draw-wrap');
+const edgeBar = document.getElementById('edge-bar');
+const edgeInput = document.getElementById('edge-input');
+
+const draw = {
+  repair: null,
+  verts: [], closed: false,
+  ppf: 28, ox: 70, oy: 0,
+  snapIn: 3, ortho: true,
+  pointers: new Map(),
+  gesture: null,    /* null | {mode:'maybe'|'pan'|'vertex'|'pinch', ...} */
+  edgeHits: [],
+  editingEdge: -1
+};
+
+function openDraw(r) {
+  draw.repair = r;
+  draw.verts = (r.poly && r.poly.verts) ? r.poly.verts.map(v => ({ x: v.x, y: v.y })) : [];
+  draw.closed = !!(r.poly && r.poly.closed && draw.verts.length >= 3);
+  draw.editingEdge = -1;
+  edgeBar.classList.remove('open');
+  dModal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => { sizeDrawCanvas(); fitView(); renderDraw(); });
+}
+function closeDraw() {
+  dModal.classList.remove('open');
+  document.body.style.overflow = '';
+  draw.repair = null;
+}
+function sizeDrawCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = dWrap.getBoundingClientRect();
+  dcv.width = Math.round(rect.width * dpr);
+  dcv.height = Math.round(rect.height * dpr);
+  dctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function cvSize() { const r = dWrap.getBoundingClientRect(); return { w: r.width, h: r.height }; }
+function toScreen(p) { return { x: draw.ox + p.x * draw.ppf, y: draw.oy - p.y * draw.ppf }; }
+function toWorld(sx, sy) { return { x: (sx - draw.ox) / draw.ppf, y: (draw.oy - sy) / draw.ppf }; }
+function snapStepFt() { return draw.snapIn / 12; }
+function snapCoord(v) { const st = snapStepFt(); return Math.round(v / st) * st; }
+function fitView() {
+  const { w, h } = cvSize();
+  if (draw.verts.length >= 2) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    draw.verts.forEach(v => { minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x); minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y); });
+    const spanX = Math.max(maxX - minX, 4), spanY = Math.max(maxY - minY, 4);
+    draw.ppf = Math.min((w - 120) / spanX, (h - 120) / spanY);
+    draw.ppf = Math.max(4, Math.min(200, draw.ppf));
+    draw.ox = (w - (maxX + minX) * draw.ppf) / 2;
+    draw.oy = (h + (maxY + minY) * draw.ppf) / 2;
+  } else {
+    draw.ppf = Math.max(14, Math.min(34, w / 24));
+    draw.ox = 60;
+    draw.oy = h - 60;
+  }
+}
+function zoomAt(factor, cx, cy) {
+  const before = toWorld(cx, cy);
+  draw.ppf = Math.max(4, Math.min(240, draw.ppf * factor));
+  draw.ox = cx - before.x * draw.ppf;
+  draw.oy = cy + before.y * draw.ppf;
+  renderDraw();
+}
+
+function renderDraw() {
+  const { w, h } = cvSize();
+  dctx.clearRect(0, 0, w, h);
+  dctx.fillStyle = '#1b1b18';
+  dctx.fillRect(0, 0, w, h);
+
+  /* grid */
+  const stepFt = snapStepFt();
+  const minorPx = stepFt * draw.ppf;
+  const x0 = toWorld(0, 0).x, x1 = toWorld(w, 0).x;
+  const y1 = toWorld(0, 0).y, y0 = toWorld(0, h).y;
+  function lines(spacingFt, color, width) {
+    dctx.strokeStyle = color;
+    dctx.lineWidth = width;
+    dctx.beginPath();
+    for (let x = Math.floor(x0 / spacingFt) * spacingFt; x <= x1; x += spacingFt) {
+      const sx = draw.ox + x * draw.ppf;
+      dctx.moveTo(sx, 0); dctx.lineTo(sx, h);
+    }
+    for (let y = Math.floor(y0 / spacingFt) * spacingFt; y <= y1; y += spacingFt) {
+      const sy = draw.oy - y * draw.ppf;
+      dctx.moveTo(0, sy); dctx.lineTo(w, sy);
+    }
+    dctx.stroke();
+  }
+  if (minorPx >= 8 && stepFt < 1) lines(stepFt, '#26261f', 1);
+  if (draw.ppf >= 11) lines(1, '#30302a', 1);
+  lines(5, '#42423a', 1.5);
+
+  /* 5 ft labels along edges */
+  dctx.fillStyle = '#76756a';
+  dctx.font = '600 10px DM Sans, sans-serif';
+  dctx.textAlign = 'center';
+  dctx.textBaseline = 'bottom';
+  for (let x = Math.ceil(x0 / 5) * 5; x <= x1; x += 5) {
+    dctx.fillText(x + "'", draw.ox + x * draw.ppf, h - 4);
+  }
+  dctx.textAlign = 'left';
+  dctx.textBaseline = 'middle';
+  for (let y = Math.ceil(y0 / 5) * 5; y <= y1; y += 5) {
+    dctx.fillText(y + "'", 5, draw.oy - y * draw.ppf);
+  }
+
+  const verts = draw.verts;
+  draw.edgeHits = [];
+  if (verts.length) {
+    const pts = verts.map(toScreen);
+    /* fill */
+    if (draw.closed && verts.length >= 3) {
+      dctx.beginPath();
+      pts.forEach((p, i) => i === 0 ? dctx.moveTo(p.x, p.y) : dctx.lineTo(p.x, p.y));
+      dctx.closePath();
+      dctx.fillStyle = 'rgba(224,154,58,0.16)';
+      dctx.fill();
+    }
+    /* edges */
+    dctx.strokeStyle = '#E09A3A';
+    dctx.lineWidth = 2.5;
+    dctx.beginPath();
+    pts.forEach((p, i) => i === 0 ? dctx.moveTo(p.x, p.y) : dctx.lineTo(p.x, p.y));
+    if (draw.closed) dctx.closePath();
+    dctx.stroke();
+
+    /* edge length labels */
+    const edgeCount = draw.closed ? verts.length : verts.length - 1;
+    dctx.font = '600 12px DM Sans, sans-serif';
+    dctx.textAlign = 'center';
+    dctx.textBaseline = 'middle';
+    for (let i = 0; i < edgeCount; i++) {
+      const jv = (i + 1) % verts.length;
+      const a = pts[i], b = pts[jv];
+      const lenFt = Math.hypot(verts[i].x - verts[jv].x, verts[i].y - verts[jv].y);
+      if (lenFt < 0.02) continue;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const text = fmtFtIn(lenFt);
+      const tw = dctx.measureText(text).width;
+      const bw = tw + 14, bh = 22;
+      dctx.fillStyle = draw.editingEdge === i ? '#E09A3A' : '#2C2C2A';
+      dctx.strokeStyle = '#E09A3A';
+      dctx.lineWidth = 1;
+      roundRect(dctx, mx - bw / 2, my - bh / 2, bw, bh, 5);
+      dctx.fill(); dctx.stroke();
+      dctx.fillStyle = draw.editingEdge === i ? '#1b1b18' : '#f0e9da';
+      dctx.fillText(text, mx, my + 0.5);
+      draw.edgeHits.push({ i, x: mx - bw / 2 - 6, y: my - bh / 2 - 6, w: bw + 12, h: bh + 12 });
+    }
+
+    /* vertices */
+    pts.forEach((p, i) => {
+      dctx.beginPath();
+      dctx.arc(p.x, p.y, i === 0 && !draw.closed ? 9 : 7, 0, Math.PI * 2);
+      dctx.fillStyle = i === 0 && !draw.closed && verts.length >= 3 ? '#5fcb88' : '#E09A3A';
+      dctx.fill();
+      dctx.strokeStyle = '#1b1b18';
+      dctx.lineWidth = 2.5;
+      dctx.stroke();
+    });
+  }
+
+  /* status */
+  const area = draw.closed ? shoelace(verts) : 0;
+  document.getElementById('d-area').innerHTML = fmt(area, 1) + ' ft&sup2;';
+  const msg = document.getElementById('d-msg');
+  if (!verts.length) msg.textContent = 'Tap the grid to place corners. Pinch to zoom, drag empty space to pan.';
+  else if (!draw.closed && verts.length < 3) msg.textContent = 'Keep tapping corners. You need at least 3.';
+  else if (!draw.closed) msg.textContent = 'Tap the green starting corner (or "Close shape") to finish. Drag corners to adjust.';
+  else msg.textContent = 'Shape closed. Drag corners to adjust, tap a length tag to type the exact size, then hit Done.';
+  document.getElementById('d-close-shape').disabled = draw.closed || verts.length < 3;
+  document.getElementById('d-undo').disabled = !verts.length && !draw.closed;
+}
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+/* pointer interactions */
+function pointerPos(ev) {
+  const rect = dcv.getBoundingClientRect();
+  return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+}
+function vertexAt(sx, sy) {
+  for (let i = 0; i < draw.verts.length; i++) {
+    const p = toScreen(draw.verts[i]);
+    if (Math.hypot(p.x - sx, p.y - sy) <= 20) return i;
+  }
+  return -1;
+}
+function edgeLabelAt(sx, sy) {
+  for (const e of draw.edgeHits) {
+    if (sx >= e.x && sx <= e.x + e.w && sy >= e.y && sy <= e.y + e.h) return e.i;
+  }
+  return -1;
+}
+function applyOrthoSnap(pt) {
+  if (!draw.ortho || !draw.verts.length || draw.closed) {
+    return { x: snapCoord(pt.x), y: snapCoord(pt.y) };
+  }
+  const prev = draw.verts[draw.verts.length - 1];
+  const dx = pt.x - prev.x, dy = pt.y - prev.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 0.05) return { x: snapCoord(pt.x), y: snapCoord(pt.y) };
+  const ang = Math.atan2(dy, dx);
+  const snap45 = Math.round(ang / (Math.PI / 4)) * (Math.PI / 4);
+  if (Math.abs(ang - snap45) < (10 * Math.PI / 180)) {
+    const st = snapStepFt();
+    const snDist = Math.max(st, Math.round(dist / st) * st);
+    return { x: prev.x + Math.cos(snap45) * snDist, y: prev.y + Math.sin(snap45) * snDist };
+  }
+  return { x: snapCoord(pt.x), y: snapCoord(pt.y) };
+}
+
+dcv.addEventListener('pointerdown', (ev) => {
+  ev.preventDefault();
+  dcv.setPointerCapture(ev.pointerId);
+  const pos = pointerPos(ev);
+  draw.pointers.set(ev.pointerId, pos);
+
+  if (draw.pointers.size === 2) {
+    const [a, b] = [...draw.pointers.values()];
+    draw.gesture = {
+      mode: 'pinch',
+      startDist: Math.hypot(a.x - b.x, a.y - b.y),
+      startPpf: draw.ppf,
+      center: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+      world: toWorld((a.x + b.x) / 2, (a.y + b.y) / 2)
+    };
+    return;
+  }
+  if (edgeBar.classList.contains('open')) { commitEdgeEdit(false); }
+  const vi = vertexAt(pos.x, pos.y);
+  if (vi >= 0) {
+    if (!draw.closed && vi === 0 && draw.verts.length >= 3) {
+      draw.gesture = { mode: 'maybe-close', start: pos };
+      return;
+    }
+    draw.gesture = { mode: 'vertex', idx: vi };
+    return;
+  }
+  const ei = edgeLabelAt(pos.x, pos.y);
+  if (ei >= 0) {
+    draw.gesture = null;
+    startEdgeEdit(ei);
+    return;
+  }
+  draw.gesture = { mode: 'maybe', start: pos, startOx: draw.ox, startOy: draw.oy };
+});
+dcv.addEventListener('pointermove', (ev) => {
+  if (!draw.pointers.has(ev.pointerId)) return;
+  const pos = pointerPos(ev);
+  draw.pointers.set(ev.pointerId, pos);
+  const g = draw.gesture;
+  if (!g) return;
+
+  if (g.mode === 'pinch' && draw.pointers.size === 2) {
+    const [a, b] = [...draw.pointers.values()];
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    draw.ppf = Math.max(4, Math.min(240, g.startPpf * dist / g.startDist));
+    draw.ox = cx - g.world.x * draw.ppf;
+    draw.oy = cy + g.world.y * draw.ppf;
+    renderDraw();
+    return;
+  }
+  if (g.mode === 'vertex') {
+    const wpt = toWorld(pos.x, pos.y);
+    draw.verts[g.idx] = { x: snapCoord(wpt.x), y: snapCoord(wpt.y) };
+    renderDraw();
+    return;
+  }
+  if ((g.mode === 'maybe' || g.mode === 'maybe-close') && Math.hypot(pos.x - g.start.x, pos.y - g.start.y) > 9) {
+    if (g.mode === 'maybe-close') { draw.gesture = { mode: 'vertex', idx: 0 }; return; }
+    draw.gesture = { mode: 'pan', start: g.start, startOx: g.startOx, startOy: g.startOy };
+    return;
+  }
+  if (g.mode === 'pan') {
+    draw.ox = g.startOx + (pos.x - g.start.x);
+    draw.oy = g.startOy + (pos.y - g.start.y);
+    renderDraw();
+  }
+});
+function endPointer(ev) {
+  const pos = pointerPos(ev);
+  const g = draw.gesture;
+  draw.pointers.delete(ev.pointerId);
+  if (!g) return;
+  if (g.mode === 'pinch') { if (draw.pointers.size < 2) draw.gesture = null; return; }
+  draw.gesture = null;
+  if (g.mode === 'maybe-close') {
+    draw.closed = true;
+    renderDraw();
+    return;
+  }
+  if (g.mode === 'maybe' && !draw.closed) {
+    const wpt = toWorld(pos.x, pos.y);
+    draw.verts.push(applyOrthoSnap(wpt));
+    renderDraw();
+  }
+}
+dcv.addEventListener('pointerup', endPointer);
+dcv.addEventListener('pointercancel', (ev) => { draw.pointers.delete(ev.pointerId); draw.gesture = null; });
+dcv.addEventListener('wheel', (ev) => {
+  ev.preventDefault();
+  const pos = pointerPos(ev);
+  zoomAt(ev.deltaY < 0 ? 1.12 : 0.89, pos.x, pos.y);
+}, { passive: false });
+
+/* edge length editing */
+function startEdgeEdit(i) {
+  draw.editingEdge = i;
+  const jv = (i + 1) % draw.verts.length;
+  const len = Math.hypot(draw.verts[i].x - draw.verts[jv].x, draw.verts[i].y - draw.verts[jv].y);
+  edgeInput.value = fmtFtIn(len).replace(/[¼½¾]/g, m => ({'¼':' 1/4','½':' 1/2','¾':' 3/4'}[m]));
+  edgeBar.classList.add('open');
+  renderDraw();
+  edgeInput.focus();
+  edgeInput.select();
+}
+function commitEdgeEdit(apply) {
+  const i = draw.editingEdge;
+  if (i >= 0 && apply) {
+    const newLen = parseFtIn(edgeInput.value);
+    if (newLen > 0) {
+      const jv = (i + 1) % draw.verts.length;
+      const a = draw.verts[i], b = draw.verts[jv];
+      const cur = Math.hypot(b.x - a.x, b.y - a.y);
+      if (cur > 0.001) {
+        const ux = (b.x - a.x) / cur, uy = (b.y - a.y) / cur;
+        draw.verts[jv] = { x: a.x + ux * newLen, y: a.y + uy * newLen };
+      }
+    }
+  }
+  draw.editingEdge = -1;
+  edgeBar.classList.remove('open');
+  renderDraw();
+}
+document.getElementById('edge-set').addEventListener('click', () => commitEdgeEdit(true));
+document.getElementById('edge-cancel').addEventListener('click', () => commitEdgeEdit(false));
+edgeInput.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') { ev.preventDefault(); commitEdgeEdit(true); }
+  if (ev.key === 'Escape') { ev.preventDefault(); commitEdgeEdit(false); }
+});
+
+/* toolbar */
+document.getElementById('d-cancel').addEventListener('click', closeDraw);
+document.getElementById('d-undo').addEventListener('click', () => {
+  if (draw.closed) draw.closed = false;
+  else draw.verts.pop();
+  renderDraw();
+});
+document.getElementById('d-clear').addEventListener('click', () => { draw.verts = []; draw.closed = false; renderDraw(); });
+document.getElementById('d-close-shape').addEventListener('click', () => {
+  if (draw.verts.length >= 3) { draw.closed = true; renderDraw(); }
+});
+document.getElementById('d-snap').addEventListener('change', (ev) => { draw.snapIn = Number(ev.target.value); renderDraw(); });
+document.getElementById('d-ortho').addEventListener('click', (ev) => {
+  draw.ortho = !draw.ortho;
+  ev.currentTarget.classList.toggle('on', draw.ortho);
+});
+document.getElementById('d-zin').addEventListener('click', () => { const { w, h } = cvSize(); zoomAt(1.25, w / 2, h / 2); });
+document.getElementById('d-zout').addEventListener('click', () => { const { w, h } = cvSize(); zoomAt(0.8, w / 2, h / 2); });
+document.getElementById('d-fit').addEventListener('click', () => { fitView(); renderDraw(); });
+document.getElementById('d-done').addEventListener('click', () => {
+  if (draw.verts.length >= 3 && !draw.closed) draw.closed = true;
+  if (draw.verts.length < 3 || !draw.closed) {
+    document.getElementById('d-msg').textContent = 'Place at least 3 corners and close the shape before hitting Done.';
+    return;
+  }
+  const r = draw.repair;
+  r.poly = { verts: draw.verts.map(v => ({ x: v.x, y: v.y })), closed: true };
+  r.shape = 'poly';
+  closeDraw();
+  renderRepairs(); updateComputed(); save();
+});
+window.addEventListener('resize', () => {
+  if (dModal.classList.contains('open')) { sizeDrawCanvas(); renderDraw(); }
+});
+
+/* ════════════════════ Init ════════════════════ */
+loadDB();
+if (job().repairs.length) ui.open.add(job().repairs[0].id);
+renderAll();
+
+/* test hooks */
+window.__asphalt = { DB, job, calcJob, calcRepair, parseFtIn, parseInches, fmtFtIn, shoelace, draw, openDraw, renderAll, buildPrintSheet };
+</script>
+
+</body>
+</html>
