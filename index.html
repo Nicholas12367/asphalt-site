@@ -42,6 +42,38 @@ body {
 }
 input, select, button, textarea { font-family: 'DM Sans', sans-serif; }
 
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  background: var(--asphalt-2);
+  padding: 0 10px;
+  position: sticky; top: 0; z-index: 40;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+}
+.tab {
+  flex: 1; max-width: 300px;
+  background: none; border: 0; border-bottom: 3px solid transparent;
+  color: var(--gray-mid);
+  font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px;
+  letter-spacing: -0.01em;
+  padding: 13px 8px; cursor: pointer;
+}
+.tab.on { color: #fff; border-bottom-color: var(--amber-bright); }
+#view-quick { display: none; }
+body.quick-mode { padding-bottom: 40px; }
+body.quick-mode .results-bar { display: none; }
+body.quick-mode #view-quick { display: block; }
+body.quick-mode #view-full { display: none; }
+.q-hero {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin-top: 14px; padding: 14px; border-radius: 10px;
+  background: var(--asphalt); color: #fff;
+}
+.q-hero .h-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--amber-bright); }
+.q-hero .h-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; margin-top: 2px; letter-spacing: -0.02em; }
+.q-hero .h-val .sm { font-size: 11px; font-weight: 500; color: var(--gray-mid); margin-left: 3px; }
+.q-note { font-size: 12px; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
+
 /* ── Header ── */
 .hazard-strip { height: 7px; background: var(--hazard); }
 .app-header {
@@ -465,6 +497,9 @@ input:focus, select:focus { outline: none; border-color: var(--amber); }
   .lrow .row-total, .crew-row .row-total { min-width: 52px; font-size: 12px; }
   .grid-head span:nth-child(4), .grid-head span:nth-child(5) { min-width: 52px; }
   .summary-table { font-size: 12px; }
+  .q-hero { grid-template-columns: 1fr; gap: 8px; }
+  .q-hero .h-val { font-size: 19px; }
+  .tab { font-size: 12.5px; padding: 12px 4px; }
   .draw-toolbar .btn { padding: 8px 10px; font-size: 12px; }
 }
 </style>
@@ -477,7 +512,137 @@ input:focus, select:focus { outline: none; border-color: var(--amber); }
   <div class="header-sub">Multi repair estimator</div>
 </header>
 
-<main class="app-body">
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-view="quick">Quick calculator</button>
+  <button class="tab" data-view="full">Full job estimator</button>
+</nav>
+
+<!-- ═════ QUICK CALCULATOR ═════ -->
+<main class="app-body" id="view-quick">
+
+  <div class="section-label">Material to order</div>
+  <div class="card">
+    <div class="card-title">Volume in, <span data-masslabel>tonnes</span> out</div>
+    <div class="card-subtitle">Put in the size of the repair and what the plant charges you. Density, waste and tax fill themselves in from Specs at the bottom.</div>
+
+    <div class="shape-seg" id="q-volmode">
+      <button data-mode="area">Area &times; depth</button>
+      <button data-mode="direct">Volume direct</button>
+    </div>
+
+    <div class="settings-grid" style="margin-top:12px;">
+      <div class="input-group" id="q-grp-area">
+        <label>Repair area (sq ft)</label>
+        <input type="number" id="q-area" step="1" min="0" inputmode="decimal" placeholder="e.g. 120">
+        <div class="input-hint">Square footage of the patch. This also drives the quote below.</div>
+      </div>
+      <div class="input-group" id="q-grp-depth">
+        <label>Depth (inches)</label>
+        <input type="text" id="q-depth" inputmode="decimal" placeholder='e.g. 2 or 2 1/2'>
+        <div class="input-hint">Compacted lift thickness.</div>
+      </div>
+      <div class="input-group" id="q-grp-vol">
+        <label>Volume</label>
+        <div class="rate-row">
+          <input type="number" id="q-vol" step="0.1" min="0" inputmode="decimal" placeholder="e.g. 20">
+          <select id="q-vol-unit">
+            <option value="ft3">cubic ft</option>
+            <option value="yd3">cubic yd</option>
+            <option value="m3">cubic m</option>
+          </select>
+        </div>
+        <div class="input-hint">Straight volume of the hole if you already have it.</div>
+      </div>
+      <div class="input-group" id="q-grp-varea">
+        <label>Repair area (sq ft)</label>
+        <input type="number" id="q-area2" step="1" min="0" inputmode="decimal" placeholder="e.g. 120">
+        <div class="input-hint">Only used for the quote. Leave blank if you just want tonnage.</div>
+      </div>
+      <div class="input-group">
+        <label>Asphalt price ($ / <span data-massone>tonne</span>)</label>
+        <input type="number" id="q-price" step="0.01" min="0" inputmode="decimal" placeholder="e.g. 145">
+        <div class="input-hint">What the plant charges you. Shared with the full estimator.</div>
+      </div>
+    </div>
+
+    <div class="q-hero">
+      <div><div class="h-label">Volume</div><div class="h-val"><span id="q-o-vol">0.0</span><span class="sm">ft&sup3;</span></div></div>
+      <div><div class="h-label">Order this much</div><div class="h-val"><span id="q-o-tons">0.00</span><span class="sm" data-masslabel>tonnes</span></div></div>
+      <div><div class="h-label">Asphalt cost</div><div class="h-val" id="q-o-material">$0</div></div>
+    </div>
+    <div class="q-note" id="q-o-note"></div>
+  </div>
+
+  <div class="section-label">Quote</div>
+  <div class="card">
+    <div class="card-title">Price the repair</div>
+    <div class="card-subtitle">Your rate times the square footage. The material cost above comes off it so you can see what is left before labor, fuel and everything else.</div>
+    <div class="settings-grid">
+      <div class="input-group">
+        <label>Your rate</label>
+        <div class="rate-row">
+          <input type="number" id="q-rate" step="0.5" min="0" inputmode="decimal" placeholder="e.g. 27">
+          <select id="q-rate-unit">
+            <option value="ft2">$ / sq ft</option>
+            <option value="yd2">$ / sq yd</option>
+            <option value="m2">$ / sq m</option>
+          </select>
+        </div>
+        <div class="input-hint">What you charge the customer per unit of area.</div>
+      </div>
+      <div class="input-group">
+        <label>Minimum charge ($)</label>
+        <input type="number" id="q-min" step="10" min="0" inputmode="decimal" placeholder="optional">
+        <div class="input-hint">Floor price for a small patch. Blank for none.</div>
+      </div>
+    </div>
+    <div class="totals-stack" id="q-totals"></div>
+  </div>
+
+  <div class="section-label">Specs</div>
+  <div class="card">
+    <div class="card-title">Auto-filled. Change them if your plant differs.</div>
+    <div class="card-subtitle">These are shared with the full estimator and persist on this device.</div>
+    <div class="settings-grid">
+      <div class="input-group">
+        <label>Mix type</label>
+        <select id="q-mix"></select>
+        <div class="input-hint">Sets the density below. Canadian compacted hot mix runs 2,200 to 2,400 kg/m&sup3;.</div>
+      </div>
+      <div class="input-group">
+        <label>Density (kg/m&sup3;)</label>
+        <input type="number" id="q-density" step="5" min="1500" max="3000" inputmode="decimal">
+        <div class="input-hint">Typing your own switches the mix to Custom.</div>
+      </div>
+      <div class="input-group">
+        <label>Sold by</label>
+        <select id="q-massunit">
+          <option value="tonne">Metric tonne (1,000 kg)</option>
+          <option value="ton">Short ton (2,000 lb)</option>
+        </select>
+        <div class="input-hint">Canadian plants quote per tonne. Only switch if yours bills short tons.</div>
+      </div>
+      <div class="input-group">
+        <label>Waste / over-order (%)</label>
+        <input type="number" id="q-waste" step="1" min="0" max="50" inputmode="decimal">
+        <div class="input-hint">5% simple, 10% irregular shapes.</div>
+      </div>
+      <div class="input-group">
+        <label>Tax (%)</label>
+        <input type="number" id="q-tax" step="0.1" min="0" inputmode="decimal">
+        <div class="input-hint">GST is 5%.</div>
+      </div>
+    </div>
+    <div class="repair-foot" style="margin-top:16px;">
+      <button class="btn dark" id="q-send">Send this to the full estimator</button>
+      <button class="btn" id="q-clear" style="margin-left:auto;">Clear</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═════ FULL ESTIMATOR ═════ -->
+<main class="app-body" id="view-full">
 
   <!-- Job toolbar -->
   <div class="job-bar">
@@ -522,17 +687,30 @@ input:focus, select:focus { outline: none; border-color: var(--amber); }
   <div class="section-label">Pricing &amp; material</div>
   <div class="card">
     <div class="card-title">Material &amp; quote settings</div>
-    <div class="card-subtitle">Asphalt is in metric tonnes (1,000 kg), the unit your plant sells hot mix by. Measurements stay in feet and inches. These values persist on this device.</div>
+    <div class="card-subtitle">Asphalt is priced by the <span data-massone>tonne</span>, the unit your plant sells hot mix by. Measurements stay in feet and inches. These values persist on this device.</div>
     <div class="settings-grid">
       <div class="input-group">
-        <label>Asphalt price ($/tonne)</label>
-        <input type="number" id="set-price" step="0.01" min="0" inputmode="decimal" placeholder="e.g. 110">
-        <div class="input-hint">What you pay per tonne of hot mix.</div>
+        <label>Asphalt price ($ / <span data-massone>tonne</span>)</label>
+        <input type="number" id="set-price" step="0.01" min="0" inputmode="decimal" placeholder="e.g. 145">
+        <div class="input-hint">What you pay the plant.</div>
+      </div>
+      <div class="input-group">
+        <label>Mix type</label>
+        <select id="set-mix"></select>
+        <div class="input-hint">Sets the density. Canadian compacted hot mix runs 2,200 to 2,400 kg/m&sup3;.</div>
       </div>
       <div class="input-group">
         <label>Density (kg/m³)</label>
         <input type="number" id="set-density" step="5" min="1500" max="3000" inputmode="decimal">
-        <div class="input-hint">Compacted hot mix is about 2,325. Confirm with your plant.</div>
+        <div class="input-hint">Typing your own switches the mix to Custom.</div>
+      </div>
+      <div class="input-group">
+        <label>Sold by</label>
+        <select id="set-massunit">
+          <option value="tonne">Metric tonne (1,000 kg)</option>
+          <option value="ton">Short ton (2,000 lb)</option>
+        </select>
+        <div class="input-hint">Canadian plants quote per tonne.</div>
       </div>
       <div class="input-group">
         <label>Waste / over-order (%)</label>
@@ -589,8 +767,8 @@ input:focus, select:focus { outline: none; border-color: var(--amber); }
 <div class="results-bar">
   <div class="results-strip">
     <div class="result-cell tons">
-      <div class="result-label">Tonnes to order</div>
-      <div class="result-value"><span id="t-tons">0.00</span><span class="small">tonnes</span></div>
+      <div class="result-label" data-masslabel-cap>Tonnes to order</div>
+      <div class="result-value"><span id="t-tons">0.00</span><span class="small" data-masslabel>tonnes</span></div>
     </div>
     <div class="result-cell">
       <div class="result-label">Job cost</div>
@@ -735,7 +913,24 @@ function shoelace(verts) {
 /* ════════════════════ State ════════════════════ */
 const STORE_KEY = 'asphalt-costing-v3';
 const OLD_SETTINGS_KEY = 'asphalt-calc-settings-v2';
-const DEFAULT_SETTINGS = { pricePerTon: 0, density: 2325, wastePct: 5, markupPct: 0, taxPct: 5, pricingMode: 'rate', chargeRate: 0, chargeUnit: 'yd2' };
+const DEFAULT_SETTINGS = { pricePerTon: 0, density: 2325, wastePct: 5, markupPct: 0, taxPct: 5, pricingMode: 'rate', chargeRate: 0, chargeUnit: 'yd2', massUnit: 'tonne', mix: 'general' };
+/* what the plant sells by. Canadian plants quote the metric tonne. */
+const MASS_UNITS = {
+  tonne: { kg: 1000,      label: 'tonnes', one: 'tonne', cap: 'Tonnes' },
+  ton:   { kg: 907.18474, label: 'tons',   one: 'ton',   cap: 'Tons'   }
+};
+function massU(s) { return MASS_UNITS[s && s.massUnit] || MASS_UNITS.tonne; }
+/* compacted density, kg/m3. Canadian provincial mix classes. */
+const MIX_PRESETS = [
+  ['general',    'General planning average (145 lb/ft³)', 2325],
+  ['sp_surface', 'Superpave surface SP 9.5 / 12.5',       2330],
+  ['hl3',        'Hot mix HL-3 / intermediate',           2335],
+  ['sp25',       'Base course SP 25.0',                   2400],
+  ['sma',        'Stone mastic asphalt (SMA)',            2295],
+  ['rap',        'Recycled / RAP mix',                    2250],
+  ['custom',     'Custom',                                0   ]
+];
+const VOL_UNITS = { ft3: 0.0283168, yd3: 0.764554858, m3: 1 };
 const AREA_UNITS = {
   yd2: { factor: 1 / 9,        label: 'sq yd' },
   ft2: { factor: 1,            label: 'sq ft' },
@@ -752,7 +947,8 @@ function newJob(name) {
     settings: { ...DEFAULT_SETTINGS }, crew: [], jobCosts: [], repairs: [newRepair(1)] };
 }
 
-let DB = { jobs: [], currentId: null };
+const DEFAULT_QUICK = { volMode: 'area', areaFt2: '', depthIn: '2', volVal: '', volUnit: 'ft3', rate: '', rateUnit: 'ft2', minCharge: '' };
+let DB = { jobs: [], currentId: null, quick: { ...DEFAULT_QUICK } };
 const ui = { open: new Set() };
 
 function migrateOldSettings(job) {
@@ -777,6 +973,7 @@ function loadDB() {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.jobs) && parsed.jobs.length) {
         DB = parsed;
+        DB.quick = { ...DEFAULT_QUICK, ...(DB.quick || {}) };
         DB.jobs.forEach(jb => {
           /* fill in settings added after the job was saved */
           jb.settings = { ...DEFAULT_SETTINGS, ...(jb.settings || {}) };
@@ -792,7 +989,7 @@ function loadDB() {
   } catch (e) {}
   const job = newJob('Job 1');
   migrateOldSettings(job);
-  DB = { jobs: [job], currentId: job.id };
+  DB = { jobs: [job], currentId: job.id, quick: { ...DEFAULT_QUICK } };
 }
 let saveTimer = null;
 function save() {
@@ -815,7 +1012,7 @@ function calcRepair(r, s) {
   const area = repairArea(r);
   const volFt3 = area * (r.depthIn / 12);
   const volM3 = volFt3 * 0.0283168;
-  const tons = volM3 * s.density / 1000; /* metric tonnes */
+  const tons = volM3 * s.density / massU(s).kg;
   const tonsOrder = tons * (1 + s.wastePct / 100);
   const material = tonsOrder * s.pricePerTon;
   const labor = r.labor.reduce((a, l) => a + num(l.rate) * num(l.hours), 0);
@@ -845,7 +1042,8 @@ function calcJob(j) {
     repairLabor: sum('labor'), repairExtras: sum('extras'),
     crewLabor, jobExtras,
     labor: sum('labor') + crewLabor,
-    cost, price, tax, quote: price + tax, profit: price - cost
+    cost, price, tax, quote: price + tax, profit: price - cost,
+    afterMaterial: price - sum('material')
   };
 }
 
@@ -921,7 +1119,7 @@ function repairCard(r, idx) {
       '<div class="repair-idx">' + (idx + 1) + '</div>' +
       '<input type="text" class="r-name" data-f="name" value="' + esc(r.name) + '" aria-label="Repair name">' +
       '<div class="repair-mini">' +
-        '<div class="m-tons"><span data-out="mini-tons">' + fmt(c.tonsOrder) + '</span> tonnes</div>' +
+        '<div class="m-tons"><span data-out="mini-tons">' + fmt(c.tonsOrder) + '</span> ' + massU(s).label + '</div>' +
         '<div class="m-total" data-out="mini-total">' + money0(rateMode ? c.charge : c.total) + '</div>' +
       '</div>' +
       '<span class="chev">&#9660;</span>' +
@@ -938,7 +1136,7 @@ function repairCard(r, idx) {
       '</div>' +
       '<div class="calc-strip">' +
         '<div><div class="c-label">Area</div><div class="c-val"><span data-out="area">' + fmt(c.area, 1) + '</span><span class="sm"> ft&sup2;</span></div></div>' +
-        '<div><div class="c-label">Asphalt</div><div class="c-val"><span data-out="tons">' + fmt(c.tonsOrder) + '</span><span class="sm"> tonnes</span></div></div>' +
+        '<div><div class="c-label">Asphalt</div><div class="c-val"><span data-out="tons">' + fmt(c.tonsOrder) + '</span><span class="sm"> ' + massU(s).label + '</span></div></div>' +
         '<div><div class="c-label">Material $</div><div class="c-val" data-out="material">' + money(c.material) + '</div></div>' +
       '</div>' +
       '<div class="section-label" style="margin-top:16px;">Labor on this repair</div>' +
@@ -1044,7 +1242,7 @@ function renderSummary() {
     const s = j.settings;
     const rateMode = s.pricingMode === 'rate';
     html = '<div class="summary-table-wrap"><table class="summary-table"><thead><tr>' +
-      '<th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tonnes</th><th>Material</th><th>Labor</th><th>Extras</th><th>' + (rateMode ? 'Cost</th><th>Charge' : 'Total') + '</th>' +
+      '<th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>' + massU(s).cap + '</th><th>Material</th><th>Labor</th><th>Extras</th><th>' + (rateMode ? 'Cost</th><th>Charge' : 'Total') + '</th>' +
       '</tr></thead><tbody>';
     C.per.forEach(p => {
       html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 1) + '</td><td>' + (p.r.depthIn || 0) + '"</td>' +
@@ -1056,7 +1254,8 @@ function renderSummary() {
     if (C.jobExtras > 0) html += '<tr class="sub"><td>Other job costs</td><td></td><td></td><td></td><td></td><td></td><td>' + money(C.jobExtras) + '</td><td>' + money(C.jobExtras) + '</td>' + padCell + '</tr>';
     html += '</tbody></table></div>';
     html += '<div class="totals-stack">' +
-      '<div class="t-line"><span class="l">Asphalt to order (incl. ' + s.wastePct + '% waste)</span><span class="v"><strong>' + fmt(C.tonsOrder) + ' tonnes</strong></span></div>' +
+      '<div class="t-line"><span class="l">Asphalt to order (incl. ' + s.wastePct + '% waste)</span><span class="v"><strong>' + fmt(C.tonsOrder) + ' ' + massU(s).label + '</strong></span></div>' +
+      '<div class="t-line"><span class="l">Asphalt cost</span><span class="v">' + money(C.material) + '</span></div>' +
       '<div class="t-line"><span class="l">Total cost (material + labor + extras)</span><span class="v">' + money(C.cost) + '</span></div>' +
       (rateMode
         ? '<div class="t-line"><span class="l">Customer price (area &times; rate)</span><span class="v">' + money(C.price) + '</span></div>'
@@ -1064,7 +1263,8 @@ function renderSummary() {
           '<div class="t-line"><span class="l">Customer price</span><span class="v">' + money(C.price) + '</span></div>') +
       '<div class="t-line"><span class="l">Tax ' + s.taxPct + '%</span><span class="v">' + money(C.tax) + '</span></div>' +
       '<div class="t-line big"><span class="l">Quote total</span><span class="v">' + money(C.quote) + '</span></div>' +
-      '<div class="t-line profit' + (C.profit < 0 ? ' neg' : '') + '"><span class="l">Your profit</span><span class="v">' + money(C.profit) + '</span></div>' +
+      '<div class="t-line profit' + (C.afterMaterial < 0 ? ' neg' : '') + '"><span class="l">Price less asphalt (before labor &amp; extras)</span><span class="v">' + money(C.afterMaterial) + '</span></div>' +
+      '<div class="t-line profit' + (C.profit < 0 ? ' neg' : '') + '"><span class="l">Your profit (after everything)</span><span class="v">' + money(C.profit) + '</span></div>' +
       '</div>';
   }
   document.getElementById('summary-body').innerHTML = html;
@@ -1085,8 +1285,21 @@ function renderJobsSelect() {
   sel.innerHTML = DB.jobs.map(jb => '<option value="' + jb.id + '"' + (jb.id === DB.currentId ? ' selected' : '') + '>' + esc(jb.name) + '</option>').join('');
   document.getElementById('job-name').value = job().name;
 }
+function mixOptions(sel) {
+  return MIX_PRESETS.map(([k, lbl, d]) =>
+    '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + lbl + (d ? ' — ' + d.toLocaleString() : '') + '</option>').join('');
+}
+function applyMassLabels() {
+  const u = massU(job().settings);
+  document.querySelectorAll('[data-masslabel]').forEach(el => { el.textContent = u.label; });
+  document.querySelectorAll('[data-massone]').forEach(el => { el.textContent = u.one; });
+  document.querySelectorAll('[data-masslabel-cap]').forEach(el => { el.textContent = u.cap + ' to order'; });
+}
 function renderSettings() {
   const s = job().settings;
+  document.getElementById('set-mix').innerHTML = mixOptions(s.mix);
+  document.getElementById('set-massunit').value = MASS_UNITS[s.massUnit] ? s.massUnit : 'tonne';
+  applyMassLabels();
   document.getElementById('set-price').value = s.pricePerTon || '';
   document.getElementById('set-density').value = s.density;
   document.getElementById('set-waste').value = s.wastePct;
@@ -1107,6 +1320,7 @@ function renderAll() {
   renderJobCosts();
   renderSummary();
   renderTotalsBar();
+  renderQuick();
 }
 /* lightweight recompute: update outputs only, no input rebuilds */
 function updateComputed() {
@@ -1141,6 +1355,7 @@ function updateComputed() {
   updateJobCostsTally();
   renderSummary();
   renderTotalsBar();
+  renderQuickOutputs();
 }
 
 /* ════════════════════ Events: repairs ════════════════════ */
@@ -1325,10 +1540,18 @@ document.getElementById('jobcosts-rows').addEventListener('input', (ev) => {
     const s = job().settings;
     const v = num(ev.target.value);
     s[key] = v >= 0 ? v : DEFAULT_SETTINGS[key];
-    if (key === 'density' && v <= 0) s.density = DEFAULT_SETTINGS.density;
+    if (key === 'density') {
+      if (v <= 0) s.density = DEFAULT_SETTINGS.density;
+      s.mix = 'custom';
+      document.getElementById('set-mix').value = 'custom';
+      document.getElementById('q-mix').value = 'custom';
+    }
+    syncSpecInputs(ev.target.id);
     updateComputed(); save();
   });
 });
+document.getElementById('set-mix').addEventListener('change', (ev) => { setMix(ev.target.value); });
+document.getElementById('set-massunit').addEventListener('change', (ev) => { setMassUnit(ev.target.value); });
 document.getElementById('set-mode').addEventListener('change', (ev) => {
   job().settings.pricingMode = ev.target.value === 'markup' ? 'markup' : 'rate';
   renderSettings(); renderRepairs(); updateComputed(); save();
@@ -1404,7 +1627,7 @@ function buildPrintSheet(mode) {
       '</div>' +
       '<div class="p-note">Estimate valid 30 days. Final billing based on measured quantities placed.</div>';
   } else {
-    html += '<table><thead><tr><th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>Tonnes</th><th>Material</th><th>Labor</th><th>Extras</th><th>Cost</th>' + (rateMode ? '<th>Charge</th>' : '') + '</tr></thead><tbody>';
+    html += '<table><thead><tr><th>Repair</th><th>Area ft&sup2;</th><th>Depth</th><th>' + massU(s).cap + '</th><th>Material</th><th>Labor</th><th>Extras</th><th>Cost</th>' + (rateMode ? '<th>Charge</th>' : '') + '</tr></thead><tbody>';
     C.per.forEach(p => {
       html += '<tr><td>' + esc(p.r.name) + '</td><td>' + fmt(p.c.area, 1) + '</td><td>' + (p.r.depthIn || 0) + '"</td><td>' + fmt(p.c.tonsOrder) + '</td>' +
         '<td>' + money(p.c.material) + '</td><td>' + money(p.c.labor) + '</td><td>' + money(p.c.extras) + '</td><td>' + money(p.c.total) + '</td>' + (rateMode ? '<td>' + money(p.c.charge) + '</td>' : '') + '</tr>';
@@ -1414,7 +1637,8 @@ function buildPrintSheet(mode) {
     if (C.jobExtras > 0) html += '<tr><td>Other job costs</td><td></td><td></td><td></td><td></td><td></td><td>' + money(C.jobExtras) + '</td><td>' + money(C.jobExtras) + '</td>' + pad + '</tr>';
     html += '</tbody></table>';
     html += '<div class="p-totals">' +
-      '<div><span>Asphalt to order</span><span>' + fmt(C.tonsOrder) + ' tonnes</span></div>' +
+      '<div><span>Asphalt to order</span><span>' + fmt(C.tonsOrder) + ' ' + massU(s).label + '</span></div>' +
+      '<div><span>Asphalt cost</span><span>' + money(C.material) + '</span></div>' +
       '<div><span>Total cost</span><span>' + money(C.cost) + '</span></div>' +
       (rateMode
         ? '<div><span>Customer price (area &times; rate)</span><span>' + money(C.price) + '</span></div>'
@@ -1422,6 +1646,7 @@ function buildPrintSheet(mode) {
           '<div><span>Customer price</span><span>' + money(C.price) + '</span></div>') +
       '<div><span>Tax ' + s.taxPct + '%</span><span>' + money(C.tax) + '</span></div>' +
       '<div class="grand"><span>Quote total</span><span>' + money(C.quote) + '</span></div>' +
+      '<div><span>Price less asphalt</span><span>' + money(C.afterMaterial) + '</span></div>' +
       '<div><span>Profit</span><span>' + money(C.profit) + '</span></div>' +
       '</div>';
   }
@@ -1820,13 +2045,215 @@ window.addEventListener('resize', () => {
   if (dModal.classList.contains('open')) { sizeDrawCanvas(); renderDraw(); }
 });
 
+/* ════════════════════ Quick calculator ════════════════════ */
+/* Shared spec fields. Both views write the same job settings, so a number
+   typed in one place shows up in the other. */
+const SPEC_PAIRS = [
+  ['set-price',   'q-price',    'pricePerTon'],
+  ['set-density', 'q-density',  'density'],
+  ['set-waste',   'q-waste',    'wastePct'],
+  ['set-tax',     'q-tax',      'taxPct']
+];
+function syncSpecInputs(fromId) {
+  const s = job().settings;
+  SPEC_PAIRS.forEach(([a, b, key]) => {
+    const v = key === 'pricePerTon' ? (s[key] || '') : s[key];
+    if (fromId !== a) document.getElementById(a).value = v;
+    if (fromId !== b) document.getElementById(b).value = v;
+  });
+}
+function setMix(key) {
+  const s = job().settings;
+  const preset = MIX_PRESETS.find(m => m[0] === key);
+  if (!preset) return;
+  s.mix = key;
+  if (preset[2] > 0) s.density = preset[2];
+  document.getElementById('set-mix').value = key;
+  document.getElementById('q-mix').value = key;
+  syncSpecInputs(null);
+  updateComputed(); save();
+}
+function setMassUnit(u) {
+  const s = job().settings;
+  s.massUnit = MASS_UNITS[u] ? u : 'tonne';
+  document.getElementById('set-massunit').value = s.massUnit;
+  document.getElementById('q-massunit').value = s.massUnit;
+  applyMassLabels();
+  renderRepairs();
+  updateComputed(); save();
+}
+
+function calcQuick() {
+  const s = job().settings, q = DB.quick;
+  const areaFt2 = num(q.areaFt2);
+  let volM3;
+  if (q.volMode === 'direct') {
+    volM3 = num(q.volVal) * (VOL_UNITS[q.volUnit] || VOL_UNITS.ft3);
+  } else {
+    volM3 = areaFt2 * (parseInches(q.depthIn) / 12) * VOL_UNITS.ft3;
+  }
+  const mu = massU(s);
+  const net = volM3 * s.density / mu.kg;
+  const order = net * (1 + num(s.wastePct) / 100);
+  const material = order * num(s.pricePerTon);
+  const unit = AREA_UNITS[q.rateUnit] || AREA_UNITS.ft2;
+  let price = areaFt2 * unit.factor * num(q.rate);
+  const minCharge = num(q.minCharge);
+  const minApplied = minCharge > 0 && price < minCharge;
+  if (minApplied) price = minCharge;
+  const tax = price * num(s.taxPct) / 100;
+  const afterMaterial = price - material;
+  return {
+    areaFt2, volM3, volFt3: volM3 / VOL_UNITS.ft3, volYd3: volM3 / VOL_UNITS.yd3,
+    net, order, material, price, tax, quote: price + tax,
+    afterMaterial, marginPct: price > 0 ? afterMaterial / price * 100 : 0,
+    minApplied, unit
+  };
+}
+
+function renderQuick() {
+  const s = job().settings, q = DB.quick;
+  document.getElementById('q-mix').innerHTML = mixOptions(s.mix);
+  document.getElementById('q-massunit').value = MASS_UNITS[s.massUnit] ? s.massUnit : 'tonne';
+  document.getElementById('q-area').value = q.areaFt2;
+  document.getElementById('q-area2').value = q.areaFt2;
+  document.getElementById('q-depth').value = q.depthIn;
+  document.getElementById('q-vol').value = q.volVal;
+  document.getElementById('q-vol-unit').value = VOL_UNITS[q.volUnit] ? q.volUnit : 'ft3';
+  document.getElementById('q-rate').value = q.rate;
+  document.getElementById('q-rate-unit').value = AREA_UNITS[q.rateUnit] ? q.rateUnit : 'ft2';
+  document.getElementById('q-min').value = q.minCharge;
+  syncSpecInputs(null);
+  applyMassLabels();
+  const direct = q.volMode === 'direct';
+  document.querySelectorAll('#q-volmode button').forEach(b =>
+    b.classList.toggle('on', (b.dataset.mode === 'direct') === direct));
+  document.getElementById('q-grp-area').style.display  = direct ? 'none' : '';
+  document.getElementById('q-grp-depth').style.display = direct ? 'none' : '';
+  document.getElementById('q-grp-vol').style.display   = direct ? '' : 'none';
+  document.getElementById('q-grp-varea').style.display = direct ? '' : 'none';
+  renderQuickOutputs();
+}
+
+function renderQuickOutputs() {
+  const s = job().settings;
+  const Q = calcQuick();
+  const mu = massU(s);
+  document.getElementById('q-o-vol').textContent = fmt(Q.volFt3, 1);
+  document.getElementById('q-o-tons').textContent = fmt(Q.order);
+  document.getElementById('q-o-material').textContent = money(Q.material);
+  document.getElementById('q-o-note').innerHTML =
+    fmt(Q.volYd3, 2) + ' cubic yd &middot; ' + fmt(Q.volM3, 2) + ' m&sup3; &middot; ' +
+    'net ' + fmt(Q.net) + ' ' + mu.label + ', ordering ' + fmt(Q.order) + ' with ' + s.wastePct + '% waste at ' +
+    s.density.toLocaleString() + ' kg/m&sup3;.';
+
+  const rateLbl = (num(DB.quick.rate) ? money(num(DB.quick.rate)) : '$0') + ' / ' + Q.unit.label;
+  document.getElementById('q-totals').innerHTML =
+    '<div class="t-line"><span class="l">Area</span><span class="v">' + fmt(Q.areaFt2, 0) + ' ft&sup2;</span></div>' +
+    '<div class="t-line"><span class="l">Rate</span><span class="v">' + rateLbl + '</span></div>' +
+    (Q.minApplied ? '<div class="t-line"><span class="l">Minimum charge applied</span><span class="v">' + money(num(DB.quick.minCharge)) + '</span></div>' : '') +
+    '<div class="t-line"><span class="l">Price before tax</span><span class="v">' + money(Q.price) + '</span></div>' +
+    '<div class="t-line"><span class="l">Tax ' + s.taxPct + '%</span><span class="v">' + money(Q.tax) + '</span></div>' +
+    '<div class="t-line big"><span class="l">Quote total</span><span class="v">' + money(Q.quote) + '</span></div>' +
+    '<div class="t-line"><span class="l">Less asphalt (' + fmt(Q.order) + ' ' + mu.label + ')</span><span class="v">&minus;' + money(Q.material) + '</span></div>' +
+    '<div class="t-line profit' + (Q.afterMaterial < 0 ? ' neg' : '') + '"><span class="l">Left after asphalt</span><span class="v">' + money(Q.afterMaterial) + (Q.price > 0 ? '  (' + fmt(Q.marginPct, 0) + '%)' : '') + '</span></div>';
+}
+
+function qSet(key, val) { DB.quick[key] = val; renderQuickOutputs(); save(); }
+
+document.getElementById('q-volmode').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button[data-mode]');
+  if (!b) return;
+  DB.quick.volMode = b.dataset.mode === 'direct' ? 'direct' : 'area';
+  renderQuick(); save();
+});
+document.getElementById('q-area').addEventListener('input', (ev) => {
+  DB.quick.areaFt2 = ev.target.value;
+  document.getElementById('q-area2').value = ev.target.value;
+  renderQuickOutputs(); save();
+});
+document.getElementById('q-area2').addEventListener('input', (ev) => {
+  DB.quick.areaFt2 = ev.target.value;
+  document.getElementById('q-area').value = ev.target.value;
+  renderQuickOutputs(); save();
+});
+document.getElementById('q-depth').addEventListener('input', (ev) => qSet('depthIn', ev.target.value));
+document.getElementById('q-vol').addEventListener('input', (ev) => qSet('volVal', ev.target.value));
+document.getElementById('q-vol-unit').addEventListener('change', (ev) => qSet('volUnit', VOL_UNITS[ev.target.value] ? ev.target.value : 'ft3'));
+document.getElementById('q-rate').addEventListener('input', (ev) => qSet('rate', ev.target.value));
+document.getElementById('q-rate-unit').addEventListener('change', (ev) => qSet('rateUnit', AREA_UNITS[ev.target.value] ? ev.target.value : 'ft2'));
+document.getElementById('q-min').addEventListener('input', (ev) => qSet('minCharge', ev.target.value));
+document.getElementById('q-mix').addEventListener('change', (ev) => setMix(ev.target.value));
+document.getElementById('q-massunit').addEventListener('change', (ev) => setMassUnit(ev.target.value));
+[['q-price', 'pricePerTon'], ['q-density', 'density'], ['q-waste', 'wastePct'], ['q-tax', 'taxPct']].forEach(([id, key]) => {
+  document.getElementById(id).addEventListener('input', (ev) => {
+    const s = job().settings;
+    const v = num(ev.target.value);
+    s[key] = v >= 0 ? v : DEFAULT_SETTINGS[key];
+    if (key === 'density') {
+      if (v <= 0) s.density = DEFAULT_SETTINGS.density;
+      s.mix = 'custom';
+      document.getElementById('set-mix').value = 'custom';
+      document.getElementById('q-mix').value = 'custom';
+    }
+    syncSpecInputs(ev.target.id);
+    updateComputed(); save();
+  });
+});
+document.getElementById('q-clear').addEventListener('click', () => {
+  DB.quick = { ...DEFAULT_QUICK };
+  renderQuick(); save();
+});
+document.getElementById('q-send').addEventListener('click', () => {
+  const q = DB.quick, j = job(), Q = calcQuick();
+  const r = newRepair(j.repairs.length + 1);
+  r.depthIn = parseInches(q.depthIn) || 2;
+  if (q.volMode === 'direct' && num(q.areaFt2) <= 0) {
+    /* no area given, so back out a square patch of the right volume */
+    const areaFt2 = Q.volFt3 / (r.depthIn / 12);
+    r.L = Math.sqrt(Math.max(areaFt2, 0));
+    r.W = r.L;
+  } else {
+    const areaFt2 = num(q.areaFt2);
+    r.L = Math.sqrt(Math.max(areaFt2, 0));
+    r.W = r.L;
+  }
+  if (num(q.rate) > 0) {
+    j.settings.pricingMode = 'rate';
+    j.settings.chargeRate = num(q.rate);
+    j.settings.chargeUnit = AREA_UNITS[q.rateUnit] ? q.rateUnit : 'ft2';
+  }
+  j.repairs.push(r);
+  ui.open.clear(); ui.open.add(r.id);
+  showView('full');
+  renderAll(); save();
+  document.querySelector('[data-id="' + r.id + '"]').scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+/* ════════════════════ Tabs ════════════════════ */
+function showView(v) {
+  const quick = v !== 'full';
+  document.body.classList.toggle('quick-mode', quick);
+  document.querySelectorAll('#tabs .tab').forEach(b =>
+    b.classList.toggle('on', (b.dataset.view === 'quick') === quick));
+  try { localStorage.setItem('asphalt-view', quick ? 'quick' : 'full'); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+document.getElementById('tabs').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button[data-view]');
+  if (b) showView(b.dataset.view);
+});
+
 /* ════════════════════ Init ════════════════════ */
 loadDB();
 if (job().repairs.length) ui.open.add(job().repairs[0].id);
 renderAll();
+let startView = 'quick';
+try { if (localStorage.getItem('asphalt-view') === 'full') startView = 'full'; } catch (e) {}
+showView(startView);
 
 /* test hooks */
-window.__asphalt = { DB, job, calcJob, calcRepair, parseFtIn, parseInches, fmtFtIn, shoelace, draw, openDraw, renderAll, buildPrintSheet };
+window.__asphalt = { DB, job, calcJob, calcRepair, calcQuick, renderQuick, showView, setMix, setMassUnit, MASS_UNITS, MIX_PRESETS, parseFtIn, parseInches, fmtFtIn, shoelace, draw, openDraw, renderAll, buildPrintSheet };
 </script>
 
 </body>
